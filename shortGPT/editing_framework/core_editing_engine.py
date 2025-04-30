@@ -10,6 +10,9 @@ from moviepy.Clip import Clip
 from moviepy import vfx, afx
 from shortGPT.editing_framework.rendering_logger import MoviepyProgressLogger
 import json
+import tempfile
+import hashlib
+import os
 
 def load_schema(json_path):
     return json.loads(open(json_path, 'r', encoding='utf-8').read())
@@ -196,11 +199,92 @@ class CoreEditingEngine:
         }
         if 'audio' in asset['parameters']:
             params['audio'] = asset['parameters']['audio']
+        print(f"Loading video from {params['filename']}")
+        if params['filename'].startswith(('http://', 'https://')):
+            import urllib.request
+            
+            # Create a temp directory if it doesn't exist
+            temp_dir = "temp_videos"
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # Extract filename from URL
+            url = params['filename']
+            # Generate a hash of the URL for uniqueness
+            url_hash = hashlib.md5(url.encode()).hexdigest()[:10]
+            
+            # Get a safe filename - either the original if short enough or based on hash
+            original_filename = url.split('/')[-1].split('?')[0]  # Remove query parameters
+            if len(original_filename) > 50:  # Limit filename length
+                file_ext = os.path.splitext(original_filename)[1] or '.mp4'  # Default to .mp4 if no extension
+                video_filename = f"{url_hash}{file_ext}"
+            else:
+                video_filename = original_filename
+            
+            # Generate a local path for the downloaded file
+            local_path = os.path.join(temp_dir, video_filename)
+            
+            # Download the file if it doesn't exist
+            if not os.path.exists(local_path):
+                try:
+                    print(f"Downloading video from {url} to {local_path}")
+                    # Add a User-Agent header
+                    req = urllib.request.Request(
+                        url,
+                        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                    )
+                    with urllib.request.urlopen(req) as response, open(local_path, 'wb') as out_file:
+                        out_file.write(response.read())
+                except urllib.error.HTTPError as e:
+                    print(f"Failed to download video: {e}")
+            
+            # Update params to use the local file
+            params['filename'] = local_path
         clip = VideoFileClip(**params)
         return self.process_common_visual_actions(clip, asset['actions'])
 
     def process_image_asset(self, asset: Dict[str, Any]) -> ImageClip:
-        clip = ImageClip(asset['parameters']['url'])
+        url = asset['parameters']['url']
+        if url.startswith(('http://', 'https://')):
+            import urllib.request
+            
+            # Create a temp directory if it doesn't exist
+            temp_dir = "temp_images"
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # Extract filename from URL
+            image_filename = url.split('/')[-1]
+            # Generate a hash of the URL for uniqueness
+            url_hash = hashlib.md5(url.encode()).hexdigest()[:10]
+            
+            # Get a safe filename - either the original if short enough or based on hash
+            original_filename = url.split('/')[-1].split('?')[0]  # Remove query parameters
+            if len(original_filename) > 50:  # Limit filename length
+                file_ext = os.path.splitext(image_filename)[1] or '.jpg'  # Default to .mp4 if no extension
+                image_filename = f"{url_hash}{file_ext}"
+            else:
+                image_filename = original_filename
+            
+            # Generate a local path for the downloaded file
+            local_path = os.path.join(temp_dir, image_filename)
+            
+            # Download the file if it doesn't exist
+            if not os.path.exists(local_path):
+                try:
+                    print(f"Downloading image from {url} to {local_path}")
+                    req = urllib.request.Request(
+                    url,
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                    )
+                    with urllib.request.urlopen(req) as response, open(local_path, 'wb') as out_file:
+                        out_file.write(response.read())
+                except urllib.error.HTTPError as e:
+                    print(f"Failed to download image: {e}")
+                    raise e
+            
+            # Update url to use the local file
+            url = local_path
+        
+        clip = ImageClip(url)
         return self.process_common_visual_actions(clip, asset['actions'])
 
     def process_text_asset(self, asset: Dict[str, Any]) -> TextClip:

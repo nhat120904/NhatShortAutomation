@@ -15,6 +15,7 @@ To run Dockerfile do this:
 ```bash
 docker build -t short_gpt_docker:latest .
 docker run -p 31415:31415 --env-file .env short_gpt_docker:latest
+docker run -p 31415:31415 --env-file .env kedimuzafer/shortgpt:latest
 ```
 Export Docker image:
 ```bash

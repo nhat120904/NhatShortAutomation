@@ -7,7 +7,7 @@ class ElevenLabsAPI:
 
     def __init__(self, api_key):
         self.api_key = api_key
-        self.url_base = 'https://api.elevenlabs.io/v1/'
+        self.url_base = 'https://api.elevenlabs.io/v2/'
         self.get_voices()
 
     def get_voices(self):

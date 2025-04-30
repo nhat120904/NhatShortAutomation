@@ -2,7 +2,8 @@ import json
 import os
 import re
 from time import sleep, time
-
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import openai
 import tiktoken
 import yaml
@@ -70,17 +71,24 @@ def open_file(filepath):
 from openai import OpenAI
 
 def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_nl=True, conversation=None):
+    openrouter_key = ApiKeyManager.get_api_key("OPENROUTER_API_KEY")
     openai_key= ApiKeyManager.get_api_key("OPENAI_API_KEY")
     gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-    if gemini_key:
+    if openrouter_key:  
+        client = OpenAI( 
+            api_key=openrouter_key, 
+            base_url="https://openrouter.ai/api/v1"
+        )
+        model="qwen/qwen-2.5-72b-instruct:free"
+    elif openai_key:
+        client = OpenAI(api_key=openai_key)
+        model="gpt-4o-mini"
+    elif gemini_key:
         client = OpenAI( 
             api_key=gemini_key,
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
         model="gemini-2.0-flash-lite-preview-02-05"
-    elif openai_key:
-        client = OpenAI( api_key=openai_key)
-        model="gpt-4o-mini"
     else:
         raise Exception("No OpenAI or Gemini API Key found for LLM request")
     max_retry = 5

@@ -22,5 +22,5 @@ def correctScript(script, correction):
             result = gpt_utils.llm_completion(chat_prompt=chat, system=system, temp=1)
             out = json.loads(result)
         except Exception as e:
-            print("Difficulty parsing the output in gpt_chat_video.generateScript")
+            print(e, "Difficulty parsing the output in gpt_chat_video.correctScript")
     return out['script']

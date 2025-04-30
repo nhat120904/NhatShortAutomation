@@ -116,7 +116,7 @@ class VideoAutomationUI(AbstractComponentUI):
                 self.language = next((lang for lang in Language if lang.value.lower() in message.lower()), None)
                 self.language = self.language if self.language else Language.ENGLISH
                 if self.voice_module == ElevenLabsVoiceModule:
-                    self.voice_module = ElevenLabsVoiceModule(ApiKeyManager.get_api_key('ELEVENLABS_API_KEY'), "Chris", checkElevenCredits=True)
+                    self.voice_module = ElevenLabsVoiceModule(ApiKeyManager.get_api_key('ELEVENLABS_API_KEY'), "Roger", checkElevenCredits=True)
                 elif self.voice_module == EdgeTTSVoiceModule:
                     self.voice_module = EdgeTTSVoiceModule(EDGE_TTS_VOICENAME_MAPPING[self.language]['male'])
                 self.state = Chatstate.ASK_DESCRIPTION

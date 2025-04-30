@@ -80,7 +80,7 @@ class AssetComponentsUtils:
                 cls.instance_voiceChoice[provider] = gr.Radio(
                     cls.getElevenlabsVoices(),
                     label="Elevenlabs voice",
-                    value="Chris",
+                    value="Roger",
                     interactive=True,
                 )
         return cls.instance_voiceChoice[provider]
@@ -94,7 +94,7 @@ class AssetComponentsUtils:
                 cls.instance_voiceChoiceTranslation[provider] = gr.Radio(
                     cls.getElevenlabsVoices(),
                     label="Elevenlabs voice",
-                    value="Chris",
+                    value="Roger",
                     interactive=True,
                 )
         return cls.instance_voiceChoiceTranslation[provider]
