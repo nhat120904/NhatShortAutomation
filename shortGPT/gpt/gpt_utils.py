@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 import openai
 import tiktoken
 import yaml
+from langsmith import traceable
 
 from shortGPT.config.api_db import ApiKeyManager
 
@@ -70,6 +71,7 @@ def open_file(filepath):
         return infile.read()
 from openai import OpenAI
 
+@traceable
 def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_nl=True, conversation=None):
     openrouter_key = ApiKeyManager.get_api_key("OPENROUTER_API_KEY")
     openai_key= ApiKeyManager.get_api_key("OPENAI_API_KEY")
