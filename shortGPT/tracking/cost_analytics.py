@@ -1,7 +1,12 @@
+import sys
+import os
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
 import numpy as np
 from shortGPT.database.content_database import ContentDatabase
 db = ContentDatabase()
-all = []
+all = [short for short in db.getAllShorts() if short.get('api_openai') is not None]
 # Calculate average and price of the average for OpenAI
 openai_array = [short.get('api_openai') for short in all]
 avr_openai = np.mean(openai_array)

@@ -156,11 +156,17 @@ class ContentShortEngine(AbstractContentEngine):
     def _addYoutubeMetadata(self):
         if not os.path.exists('videos/'):
             os.makedirs('videos')
-        self._db_yt_title, self._db_yt_description = gpt_yt.generate_title_description_dict(self._db_script)
 
         now = datetime.datetime.now()
-        date_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-        newFileName = f"videos/{date_str} - " + \
+        date_folder = now.strftime("%Y-%m-%d")
+        date_folder_path = os.path.join('videos', date_folder)
+        if not os.path.exists(date_folder_path):
+            os.makedirs(date_folder_path)
+
+        self._db_yt_title, self._db_yt_description = gpt_yt.generate_title_description_dict(self._db_script)
+
+        time_str = now.strftime("%H-%M-%S")
+        newFileName = f"{date_folder_path}/{time_str} - " + \
             re.sub(r"[^a-zA-Z0-9 '\n\.]", '', self._db_yt_title)
 
         shutil.move(self._db_video_path, newFileName+".mp4")
