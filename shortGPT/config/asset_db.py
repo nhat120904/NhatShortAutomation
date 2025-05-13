@@ -154,6 +154,33 @@ class AssetDatabase:
             raise ValueError(f"Asset '{key}' does not exist in the database.")
 
     @classmethod
+    def get_all_assets(cls):
+        """
+        Get all assets (both local and remote) as a list of dictionaries.
+        
+        Returns:
+            list: List of dictionaries containing asset information.
+                Each dictionary includes the asset name and its properties.
+        """
+        cls.sync_local_assets()
+        all_assets = []
+        
+        # Add local assets
+        for name, asset_data in cls.local_assets._get().items():
+            asset_info = asset_data.copy()
+            asset_info['name'] = name
+            asset_info['url'] = asset_info['path']  # Add url key for consistency
+            all_assets.append(asset_info)
+            
+        # Add remote assets
+        for name, asset_data in cls.remote_assets._get().items():
+            asset_info = asset_data.copy()
+            asset_info['name'] = name
+            all_assets.append(asset_info)
+            
+        return all_assets
+
+    @classmethod
     def _remove_local_asset(cls, name: str):
         """
         Remove a local asset from the database.

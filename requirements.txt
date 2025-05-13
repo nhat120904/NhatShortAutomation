@@ -19,3 +19,4 @@ progress
 questionary
 edge-tts
 pydantic==2.10.6
+langsmith
