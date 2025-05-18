@@ -33,3 +33,4 @@ temp_images/
 temp_videos/
 *.pem
 *.DS_Store
+/.conda
