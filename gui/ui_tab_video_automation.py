@@ -25,8 +25,9 @@ class Chatstate(Enum):
     ASK_DESCRIPTION = 4
     GENERATE_SCRIPT = 5
     ASK_SATISFACTION = 6
-    MAKE_VIDEO = 7
-    ASK_CORRECTION = 8
+    ASK_MUSIC_OPTION = 7
+    MAKE_VIDEO = 8
+    ASK_CORRECTION = 9
 
 
 class VideoAutomationUI(AbstractComponentUI):
@@ -46,6 +47,8 @@ class VideoAutomationUI(AbstractComponentUI):
         self.video_folder = None
         self.errorHTML = None
         self.outHTML = None
+        self.auto_music = False
+        self.background_music = None
 
     def is_key_missing(self):
         openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
@@ -63,27 +66,39 @@ class VideoAutomationUI(AbstractComponentUI):
     def correct_script(self, script, correction):
         return gpt_chat_video.correctScript(script, correction)
 
-    def make_video(self, script, voice_module, isVertical, progress):
-        videoEngine = ContentVideoEngine(voiceModule=voice_module, script=script, isVerticalFormat=isVertical)
-        num_steps = videoEngine.get_total_steps()
-        progress_counter = 0
+    def make_video(self, script, voice_module, isVertical, progress, background_music):
+        try:
+            videoEngine = ContentVideoEngine(
+                voiceModule=voice_module, 
+                script=script, 
+                isVerticalFormat=isVertical, 
+                auto_music=self.auto_music if hasattr(self, 'auto_music') else False,
+                background_music_name=background_music if background_music else None,
+            )
+            num_steps = videoEngine.get_total_steps()
+            progress_counter = 0
 
-        def logger(prog_str):
-            progress(progress_counter / (num_steps), f"Creating video - {progress_counter} - {prog_str}")
-        videoEngine.set_logger(logger)
-        for step_num, step_info in videoEngine.makeContent():
-            progress(progress_counter / (num_steps), f"Creating video - {step_info}")
-            progress_counter += 1
+            def logger(prog_str):
+                nonlocal progress_counter
+                progress(progress_counter / (num_steps), f"Creating video - {progress_counter} - {prog_str}")
+            videoEngine.set_logger(logger)
+            for step_num, step_info in videoEngine.makeContent():
+                progress(progress_counter / (num_steps), f"Creating video - {step_info}")
+                progress_counter += 1
 
-        video_path = videoEngine.get_video_output_path()
-        return video_path
+            video_path = videoEngine.get_video_output_path()
+            return video_path
+        except Exception as e:
+            import traceback
+            print(f"Error in make_video: {e}")
+            print(traceback.format_exc())
+            raise e
 
     def reset_components(self):
         return gr.update(value=self.initialize_conversation()), gr.update(visible=True), gr.update(value="", visible=False), gr.update(value="", visible=False)
 
     def chatbot_conversation(self):
         def respond(message, chat_history, progress=gr.Progress()):
-            # global self.state, isVertical, voice_module, language, script, videoVisible, video_html
             error_html = ""
             errorVisible = False
             inputVisible = True
@@ -127,42 +142,56 @@ class VideoAutomationUI(AbstractComponentUI):
                 bot_message = f"📝 Here is your generated script: \n\n--------------\n{self.script}\n\n・Are you satisfied with the script and ready to proceed with creating the video? Please respond with 'YES' or 'NO'. 👍👎"
             elif self.state == Chatstate.ASK_SATISFACTION:
                 if "yes" in message.lower():
-                    self.state = Chatstate.MAKE_VIDEO
-                    inputVisible = False
-                    yield gr.update(visible=False), gr.update(value=[[None, "Your video is being made now! 🎬"]]), gr.update(value="", visible=False), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=False)
-                    try:
-                        video_path = self.make_video(self.script, self.voice_module, self.isVertical, progress=progress)
-                        file_name = video_path.split("/")[-1].split("\\")[-1]
-                        current_url = self.shortGptUI.share_url+"/" if self.shortGptUI.share else self.shortGptUI.local_url
-                        file_url_path = f"{current_url}gradio_api/file={video_path}"
-                        self.video_html = f'''
-                            <div style="display: flex; flex-direction: column; align-items: center;">
-                                <video width="{600}" height="{300}" style="max-height: 100%;" controls>
-                                    <source src="{file_url_path}" type="video/mp4">
-                                    Your browser does not support the video tag.
-                                </video>
-                                <a href="{file_url_path}" download="{file_name}" style="margin-top: 10px;">
-                                    <button style="font-size: 1em; padding: 10px; border: none; cursor: pointer; color: white; background: #007bff;">Download Video</button>
-                                </a>
-                            </div>'''
-                        self.videoVisible = True
-                        folderVisible = True
-                        bot_message = "Your video is completed !🎬. Scroll down below to open its file location."
-                    except Exception as e:
-                        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
-                        error_name = type(e).__name__.capitalize() + " : " + f"{e.args[0]}"
-                        errorVisible = True
-                        gradio_content_automation_ui_error_template = GradioComponentsHTML.get_html_error_template()
-                        error_html = gradio_content_automation_ui_error_template.format(error_message=error_name, stack_trace=traceback_str)
-                        bot_message = "We encountered an error while making this video ❌"
-                        print("Error", traceback_str)
-                        yield gr.update(visible=False), gr.update(value=[[None, "Your video is being made now! 🎬"]]), gr.update(value="", visible=False), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=True)
-
+                    self.state = Chatstate.ASK_MUSIC_OPTION
+                    bot_message = "Would you like to add background music to your video? Please respond with 'AUTO' for automatic selection, 'NO' for no music, or you can specify a custom music name."
                 else:
-                    self.state = Chatstate.ASK_CORRECTION  # change self.state to ASK_CORRECTION
+                    self.state = Chatstate.ASK_CORRECTION
                     bot_message = "Explain me what you want different in the script"
-            elif self.state == Chatstate.ASK_CORRECTION:  # new self.state
-                self.script = self.correct_script(self.script, message)  # call generateScript with correct=True
+            elif self.state == Chatstate.ASK_MUSIC_OPTION:
+                if "auto" in message.lower():
+                    self.auto_music = True
+                    bot_message = "I'll automatically select an appropriate background music for your video."
+                elif "no" in message.lower():
+                    self.auto_music = False
+                    bot_message = "No background music will be added to your video."
+                else:
+                    self.auto_music = False
+                    self.background_music = message
+                    bot_message = f"I'll use '{message}' as background music if available, otherwise no music will be added."
+                
+                self.state = Chatstate.MAKE_VIDEO
+                inputVisible = False
+                yield gr.update(visible=False), gr.update(value=[[None, "Your video is being made now! 🎬"]]), gr.update(value="", visible=False), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=False)
+                try:
+                    video_path = self.make_video(self.script, self.voice_module, self.isVertical, progress=progress, background_music=self.background_music)
+                    file_name = video_path.split("/")[-1].split("\\")[-1]
+                    current_url = self.shortGptUI.share_url+"/" if self.shortGptUI.share else self.shortGptUI.local_url
+                    file_url_path = f"{current_url}gradio_api/file={video_path}"
+                    self.video_html = f'''
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <video width="{600}" height="{300}" style="max-height: 100%;" controls>
+                                <source src="{file_url_path}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                            <a href="{file_url_path}" download="{file_name}" style="margin-top: 10px;">
+                                <button style="font-size: 1em; padding: 10px; border: none; cursor: pointer; color: white; background: #007bff;">Download Video</button>
+                            </a>
+                        </div>'''
+                    self.videoVisible = True
+                    folderVisible = True
+                    bot_message = "Your video is completed !🎬. Scroll down below to open its file location."
+                except Exception as e:
+                    traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+                    error_name = type(e).__name__.capitalize() + " : " + f"{e.args[0]}"
+                    errorVisible = True
+                    gradio_content_automation_ui_error_template = GradioComponentsHTML.get_html_error_template()
+                    error_html = gradio_content_automation_ui_error_template.format(error_message=error_name, stack_trace=traceback_str)
+                    bot_message = "We encountered an error while making this video ❌"
+                    print("Error", traceback_str)
+                    yield gr.update(visible=False), gr.update(value=[[None, "Your video is being made now! 🎬"]]), gr.update(value="", visible=False), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=True)
+
+            elif self.state == Chatstate.ASK_CORRECTION:
+                self.script = self.correct_script(self.script, message)
                 self.state = Chatstate.ASK_SATISFACTION
                 bot_message = f"📝 Here is your corrected script: \n\n--------------\n{self.script}\n\n・Are you satisfied with the script and ready to proceed with creating the video? Please respond with 'YES' or 'NO'. 👍👎"
             chat_history.append((message, bot_message))
@@ -177,6 +206,7 @@ class VideoAutomationUI(AbstractComponentUI):
         self.script = ""
         self.video_html = ""
         self.videoVisible = False
+        self.auto_music = False  # Initialize auto_music attribute
         return [[None, "🤖 Welcome to ShortGPT! 🚀 I'm a python framework aiming to simplify and automate your video editing tasks.\nLet's get started! 🎥🎬\n\n Do you want your video to be in landscape or vertical format? (landscape OR vertical)"]]
 
     def reset_conversation(self):
@@ -186,6 +216,7 @@ class VideoAutomationUI(AbstractComponentUI):
         self.script = ""
         self.video_html = ""
         self.videoVisible = False
+        self.auto_music = False  # Reset auto_music attribute
 
     def create_ui(self):
         with gr.Row(visible=False) as self.video_automation:

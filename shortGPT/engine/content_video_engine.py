@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 import shutil
+import random
 
 from shortGPT.api_utils.pexels_api import getBestVideo
 from shortGPT.audio import audio_utils
@@ -11,6 +12,7 @@ from shortGPT.config.asset_db import AssetDatabase
 from shortGPT.config.languages import Language
 from shortGPT.editing_framework.editing_engine import (EditingEngine,
                                                        EditingStep)
+from shortGPT.config.asset_db import AssetType
 from shortGPT.editing_utils import captions
 from shortGPT.engine.abstract_content_engine import AbstractContentEngine
 from shortGPT.gpt import gpt_editing, gpt_translate, gpt_yt
@@ -19,13 +21,17 @@ from shortGPT.gpt import gpt_editing, gpt_translate, gpt_yt
 class ContentVideoEngine(AbstractContentEngine):
 
     def __init__(self, voiceModule: VoiceModule, script: str, background_music_name="", id="",
-                 watermark=None, isVerticalFormat=False, language: Language = Language.ENGLISH):
+                 watermark=None, isVerticalFormat=False, language: Language = Language.ENGLISH, 
+                 auto_music=True):
         super().__init__(id, "general_video", language, voiceModule)
         if not id:
             if (watermark):
                 self._db_watermark = watermark
+            self._db_auto_music = auto_music
             if background_music_name:
                 self._db_background_music_name = background_music_name
+            else:
+                self._db_background_music_name = ""
             self._db_script = script
             self._db_format_vertical = isVerticalFormat
 
@@ -95,8 +101,44 @@ class ContentVideoEngine(AbstractContentEngine):
         self._db_timed_video_urls = timed_video_urls
 
     def _chooseBackgroundMusic(self):
-        if self._db_background_music_name:
-            self._db_background_music_url = AssetDatabase.get_asset_link(self._db_background_music_name)
+        try:
+            if self._db_auto_music:
+                # Get all available background music assets
+                all_assets = AssetDatabase.get_all_assets()
+                
+                # Important: Use AssetType.BACKGROUND_MUSIC.value to match enum value "background music"
+                music_assets = [asset for asset in all_assets if asset.get('type') == AssetType.BACKGROUND_MUSIC.value]
+                
+                print(f"Found {len(music_assets)} background music assets")
+                
+                if music_assets:
+                    # Randomly select a background music
+                    selected_music = random.choice(music_assets)
+                    self._db_background_music_name = selected_music.get('name')
+                    # Get properly formatted URL using Asset Database like ContentShortEngine does
+                    try:
+                        self._db_background_music_url = AssetDatabase.get_asset_link(self._db_background_music_name)
+                        print(f"Selected background music: {self._db_background_music_name}")
+                    except Exception as e:
+                        print(f"Error getting music asset link: {e}")
+                        self._db_background_music_url = None
+                else:
+                    print("No background music assets found in database")
+                    self._db_background_music_url = None
+            elif self._db_background_music_name:
+                try:
+                    # Use same approach as ContentShortEngine
+                    self._db_background_music_url = AssetDatabase.get_asset_link(self._db_background_music_name)
+                    print(f"Using specified background music: {self._db_background_music_name}")
+                except Exception as e:
+                    print(f"Error getting background music asset: {e}")
+                    self._db_background_music_url = None
+            else:
+                print("No background music specified and auto_music is disabled")
+                self._db_background_music_url = None
+        except Exception as e:
+            print(f"Error in _chooseBackgroundMusic: {e}")
+            self._db_background_music_url = None
 
     def _prepareBackgroundAssets(self):
         self.verifyParameters(voiceover_audio_url=self._db_audio_path)
@@ -119,10 +161,18 @@ class ContentVideoEngine(AbstractContentEngine):
             videoEditor = EditingEngine()
             videoEditor.addEditingStep(EditingStep.ADD_VOICEOVER_AUDIO, {
                                        'url': self._db_audio_path})
-            if (self._db_background_music_url):
-                videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {'url': self._db_background_music_url,
-                                                                              'loop_background_music': self._db_voiceover_duration,
-                                                                              "volume_percentage": 0.08})
+            
+            # Add background music if available
+            if hasattr(self, '_db_background_music_url') and self._db_background_music_url:
+                try:
+                    print(f"Adding background music: {self._db_background_music_url}")
+                    videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {
+                                                                                  'url': self._db_background_music_url,
+                                                                                  'loop_background_music': self._db_voiceover_duration,
+                                                                                  "volume_percentage": 0.08})
+                except Exception as e:
+                    print(f"Error adding background music to video: {e}")
+            
             for (t1, t2), video_url in self._db_timed_video_urls:
                 videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_VIDEO, {'url': video_url,
                                                                               'set_time_start': t1,

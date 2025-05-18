@@ -32,4 +32,4 @@ Untitled-1.ipynb
 temp_images/
 temp_videos/
 *.pem
-/.conda
+*.DS_Store
