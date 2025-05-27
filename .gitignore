@@ -34,3 +34,6 @@ temp_videos/
 *.pem
 *.DS_Store
 /.conda
+
+# OAuth credentials - keep private
+client.json
