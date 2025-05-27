@@ -133,6 +133,8 @@ class MultiLanguageTranslationEngine(AbstractContentEngine):
         newFileName = f"videos/{date_str} - " + \
             re.sub(r"[^a-zA-Z0-9 '\n\.]", '', f"translated_content_to_{self._db_target_language}")
 
-        shutil.move(self._db_video_path, newFileName+".mp4")
-        self._db_video_path = newFileName+".mp4"
+        # Use absolute path to prevent issues with directory changes
+        abs_new_filename = os.path.abspath(newFileName+".mp4")
+        shutil.move(self._db_video_path, abs_new_filename)
+        self._db_video_path = abs_new_filename
         self._db_ready_to_upload = True
