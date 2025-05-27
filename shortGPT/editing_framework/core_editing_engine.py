@@ -199,6 +199,13 @@ class CoreEditingEngine:
         }
         if 'audio' in asset['parameters']:
             params['audio'] = asset['parameters']['audio']
+        
+        # Convert m3u8 files to mp4 before processing with MoviePy
+        if params['filename'].endswith('.m3u8'):
+            print(f"Detected M3U8 file: {params['filename']}")
+            params['filename'] = self._convert_m3u8_to_mp4(params['filename'])
+            print(f"Converted to MP4: {params['filename']}")
+        
         print(f"Loading video from {params['filename']}")
         if params['filename'].startswith(('http://', 'https://')):
             import urllib.request
@@ -220,8 +227,8 @@ class CoreEditingEngine:
             else:
                 video_filename = original_filename
             
-            # Generate a local path for the downloaded file
-            local_path = os.path.join(temp_dir, video_filename)
+            # Generate an absolute local path for the downloaded file
+            local_path = os.path.abspath(os.path.join(temp_dir, video_filename))
             
             # Download the file if it doesn't exist
             if not os.path.exists(local_path):
@@ -259,13 +266,13 @@ class CoreEditingEngine:
             # Get a safe filename - either the original if short enough or based on hash
             original_filename = url.split('/')[-1].split('?')[0]  # Remove query parameters
             if len(original_filename) > 50:  # Limit filename length
-                file_ext = os.path.splitext(image_filename)[1] or '.jpg'  # Default to .mp4 if no extension
+                file_ext = os.path.splitext(image_filename)[1] or '.jpg'  # Default to .jpg if no extension
                 image_filename = f"{url_hash}{file_ext}"
             else:
                 image_filename = original_filename
             
-            # Generate a local path for the downloaded file
-            local_path = os.path.join(temp_dir, image_filename)
+            # Generate an absolute local path for the downloaded file
+            local_path = os.path.abspath(os.path.join(temp_dir, image_filename))
             
             # Download the file if it doesn't exist
             if not os.path.exists(local_path):
@@ -340,5 +347,69 @@ class CoreEditingEngine:
             return normalized_frame
         else:
             return frame
+
+    def _convert_m3u8_to_mp4(self, m3u8_path):
+        """Convert m3u8 file to mp4 using ffmpeg"""
+        import subprocess
+        import os
+        import hashlib
         
+        # Generate output filename based on input path
+        if m3u8_path.startswith(('http://', 'https://')):
+            # For URLs, create a hash-based filename
+            url_hash = hashlib.md5(m3u8_path.encode()).hexdigest()[:10]
+            output_filename = f"converted_{url_hash}.mp4"
+        else:
+            # For local files, replace .m3u8 with .mp4
+            output_filename = m3u8_path.replace('.m3u8', '_converted.mp4')
+        
+        # Ensure we have absolute path for output
+        if not os.path.isabs(output_filename):
+            temp_dir = "temp_videos"
+            os.makedirs(temp_dir, exist_ok=True)
+            output_path = os.path.abspath(os.path.join(temp_dir, output_filename))
+        else:
+            output_path = output_filename
+        
+        # Check if converted file already exists
+        if os.path.exists(output_path):
+            print(f"Converted file already exists: {output_path}")
+            return output_path
+        
+        print(f"Converting M3U8 to MP4: {m3u8_path} -> {output_path}")
+        
+        # Use ffmpeg to convert m3u8 to mp4
+        cmd = [
+            'ffmpeg',
+            '-i', m3u8_path,
+            '-c', 'copy',  # Copy streams without re-encoding for speed
+            '-avoid_negative_ts', 'make_zero',  # Handle timestamp issues
+            '-y',  # Overwrite output file if it exists
+            output_path
+        ]
+        
+        try:
+            # Run ffmpeg conversion
+            result = subprocess.run(
+                cmd, 
+                capture_output=True, 
+                text=True, 
+                check=True,
+                timeout=300  # 5 minute timeout
+            )
+            
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                print(f"Successfully converted M3U8 to MP4: {output_path}")
+                return output_path
+            else:
+                raise Exception("Conversion completed but output file is missing or empty")
+                
+        except subprocess.TimeoutExpired:
+            raise Exception(f"M3U8 conversion timed out after 5 minutes")
+        except subprocess.CalledProcessError as e:
+            error_msg = f"FFmpeg conversion failed: {e.stderr}"
+            print(f"FFmpeg error: {e.stderr}")
+            raise Exception(error_msg)
+        except Exception as e:
+            raise Exception(f"M3U8 conversion failed: {str(e)}")
 

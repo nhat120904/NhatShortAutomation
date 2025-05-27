@@ -12,8 +12,8 @@ def getYoutubeVideoLink(url):
         "no_color": True,
         "no_call_home": True,
         "no_check_certificate": True,
-        # Look for m3u8 formats first, then fall back to regular formats
-        "format": f"bestvideo[ext=m3u8]{format_filter}/bestvideo{format_filter}"
+        # Prefer mp4/webm formats, but allow m3u8 as fallback (will be converted to mp4)
+        "format": f"bestvideo[ext=mp4]{format_filter}/bestvideo[ext=webm]{format_filter}/bestvideo{format_filter}/bestvideo[ext=m3u8]{format_filter}"
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -33,6 +33,10 @@ def extract_random_clip_from_video(video_url, video_duration, clip_duration, out
         clip_duration (int): The duration of the clip in seconds.
         output_file (str): The output file path for the extracted clip.
     """
+    print(f"video url: {video_url}")
+    print(f"video duration: {video_duration}")
+    print(f"clip duration: {clip_duration}")
+    print(f"output file: {output_file}")
     if not video_duration:
         raise Exception("Could not get video duration")
     if not video_duration*0.7 > 120:
@@ -42,13 +46,14 @@ def extract_random_clip_from_video(video_url, video_duration, clip_duration, out
     command = [
         'ffmpeg',
         '-loglevel', 'error',
-        '-ss', str(start_time),
+        '-i', video_url,               # Đặt -i trước
+        '-ss', str(start_time),        # Sau -i
         '-t', str(clip_duration),
-        '-i', video_url,
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
         output_file
     ]
+    print(f"command: {command}")
     
     subprocess.run(command, check=True)
     

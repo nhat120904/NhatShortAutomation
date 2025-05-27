@@ -169,9 +169,12 @@ class ContentShortEngine(AbstractContentEngine):
         newFileName = f"{date_folder_path}/{time_str} - " + \
             re.sub(r"[^a-zA-Z0-9 '\n\.]", '', self._db_yt_title)
 
-        shutil.move(self._db_video_path, newFileName+".mp4")
-        with open(newFileName+".txt", "w", encoding="utf-8") as f:
+        # Use absolute path to prevent issues with directory changes
+        abs_video_filename = os.path.abspath(newFileName+".mp4")
+        abs_txt_filename = os.path.abspath(newFileName+".txt")
+        shutil.move(self._db_video_path, abs_video_filename)
+        with open(abs_txt_filename, "w", encoding="utf-8") as f:
             f.write(
                 f"---Youtube title---\n{self._db_yt_title}\n---Youtube description---\n{self._db_yt_description}")
-        self._db_video_path = newFileName+".mp4"
+        self._db_video_path = abs_video_filename
         self._db_ready_to_upload = True
