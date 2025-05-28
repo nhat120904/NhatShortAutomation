@@ -16,6 +16,7 @@ from shortGPT.config.languages import (EDGE_TTS_VOICENAME_MAPPING,
                                        Language)
 from shortGPT.engine.facts_short_engine import FactsShortEngine
 from shortGPT.engine.reddit_short_engine import RedditShortEngine
+from shortGPT.engine.custom_text_short_engine import CustomTextShortEngine
 class ShortAutomationUI(AbstractComponentUI):
     def __init__(self, shortGptUI: gr.Blocks):
         self.shortGptUI = shortGptUI
@@ -27,9 +28,17 @@ class ShortAutomationUI(AbstractComponentUI):
         with gr.Row(visible=False) as short_automation:
             with gr.Column():
                 numShorts = gr.Number(label="Number of shorts", minimum=1, value=1)
-                short_type = gr.Radio(["Reddit Story shorts", "Historical Facts shorts", "Scientific Facts shorts", "Custom Facts shorts"], label="Type of shorts generated", value="Reddit Story shorts", interactive=True)
+                short_type = gr.Radio(["Reddit Story shorts", "Historical Facts shorts", "Scientific Facts shorts", "Custom Facts shorts", "Custom Text shorts"], label="Type of shorts generated", value="Reddit Story shorts", interactive=True)
                 facts_subject = gr.Textbox(label="Write a subject for your facts (example: Football facts)", interactive=True, visible=False)
-                short_type.change(lambda x: gr.update(visible=x == "Custom Facts shorts"), [short_type], [facts_subject])
+                custom_text = gr.Textbox(label="Write your custom text content for the video", interactive=True, visible=False, lines=5, placeholder="Enter the text you want to be spoken in the video...")
+                
+                def on_short_type_change(x):
+                    return (
+                        gr.update(visible=x == "Custom Facts shorts"),
+                        gr.update(visible=x == "Custom Text shorts")
+                    )
+                
+                short_type.change(on_short_type_change, [short_type], [facts_subject, custom_text])
                 tts_engine = gr.Radio([AssetComponentsUtils.ELEVEN_TTS, AssetComponentsUtils.EDGE_TTS], label="Text to speech engine", value=AssetComponentsUtils.EDGE_TTS, interactive=True)
                 self.tts_engine = tts_engine.value
                 with gr.Column(visible=False) as eleven_tts:
@@ -60,7 +69,7 @@ class ShortAutomationUI(AbstractComponentUI):
 
             video_folder.click(lambda _: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
 
-            createButton.click(self.inspect_create_inputs, inputs=[AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox(), watermark, short_type, facts_subject], outputs=[generation_error]).success(self.create_short, inputs=[
+            createButton.click(self.inspect_create_inputs, inputs=[AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox(), watermark, short_type, facts_subject, custom_text], outputs=[generation_error]).success(self.create_short, inputs=[
                 numShorts,
                 short_type,
                 tts_engine,
@@ -72,11 +81,12 @@ class ShortAutomationUI(AbstractComponentUI):
                 AssetComponentsUtils.background_music_checkbox(),
                 facts_subject,
                 voice_eleven,
+                custom_text,
             ], outputs=[output, video_folder, generation_error])
         self.short_automation = short_automation
         return self.short_automation
 
-    def create_short(self, numShorts, short_type, tts_engine, language_eleven, language_edge, numImages, watermark, background_video_list, background_music_list, facts_subject, voice_eleven, progress=gr.Progress()):
+    def create_short(self, numShorts, short_type, tts_engine, language_eleven, language_edge, numImages, watermark, background_video_list, background_music_list, facts_subject, voice_eleven, custom_text, progress=gr.Progress()):
         '''Creates a short'''
 
         try:
@@ -92,7 +102,7 @@ class ShortAutomationUI(AbstractComponentUI):
                 voice_module = EdgeTTSVoiceModule(EDGE_TTS_VOICENAME_MAPPING[language]['male'])
             for i in range(numShorts):
                 shortEngine = self.create_short_engine(short_type=short_type, voice_module=voice_module, language=language, numImages=numImages, watermark=watermark,
-                                                       background_video=background_videos[i], background_music=background_musics[i], facts_subject=facts_subject)
+                                                       background_video=background_videos[i], background_music=background_musics[i], facts_subject=facts_subject, custom_text=custom_text)
                 num_steps = shortEngine.get_total_steps()
 
                 def logger(prog_str):
@@ -125,10 +135,13 @@ class ShortAutomationUI(AbstractComponentUI):
             print("Error", traceback_str)
             error_html = GradioComponentsHTML.get_html_error_template().format(error_message=error_name, stack_trace=traceback_str)
             yield self.embedHTML + '</div>', gr.update(visible=True), gr.update(value=error_html, visible=True)
-    def inspect_create_inputs(self, background_video_list, background_music_list, watermark, short_type, facts_subject, progress=gr.Progress()):
+    def inspect_create_inputs(self, background_video_list, background_music_list, watermark, short_type, facts_subject, custom_text, progress=gr.Progress()):
         if short_type == "Custom Facts shorts":
             if not facts_subject:
                 raise gr.Error("Please write down your facts short's subject")
+        if short_type == "Custom Text shorts":
+            if not custom_text or not custom_text.strip():
+                raise gr.Error("Please provide custom text content for the video")
         if not background_video_list:
             raise gr.Error("Please select at least one background video.")
 
@@ -143,18 +156,22 @@ class ShortAutomationUI(AbstractComponentUI):
             if len(watermark) < 3:
                 raise gr.Error("Watermark should be at least 3 characters long.")
 
-        openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
-        gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-        if not openai_key and not gemini_key:
-            raise gr.Error("GEMINI OR OPENAI API key is missing. Please go to the config tab and enter the API key.")
+        # Skip LLM API key validation for Custom Text shorts since we don't need LLM
+        if short_type != "Custom Text shorts":
+            openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
+            gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
+            if not openai_key and not gemini_key:
+                raise gr.Error("GEMINI OR OPENAI API key is missing. Please go to the config tab and enter the API key.")
         eleven_labs_key = ApiKeyManager.get_api_key("ELEVENLABS_API_KEY")
         if self.tts_engine == AssetComponentsUtils.ELEVEN_TTS and not eleven_labs_key:
             raise gr.Error("ELEVENLABS_API_KEY API key is missing. Please go to the config tab and enter the API key.")
         return gr.update(visible=False)
 
-    def create_short_engine(self, short_type, voice_module, language, numImages, watermark, background_video, background_music, facts_subject):
+    def create_short_engine(self, short_type, voice_module, language, numImages, watermark, background_video, background_music, facts_subject, custom_text=None):
         if short_type == "Reddit Story shorts":
             return RedditShortEngine(voice_module, background_video_name=background_video, background_music_name=background_music, num_images=numImages, watermark=watermark, language=language)
+        if short_type == "Custom Text shorts":
+            return CustomTextShortEngine(voice_module, custom_text=custom_text, background_video_name=background_video, background_music_name=background_music, num_images=numImages, watermark=watermark, language=language)
         if "fact" in short_type.lower():
             if "custom" in short_type.lower():
                 facts_subject = facts_subject

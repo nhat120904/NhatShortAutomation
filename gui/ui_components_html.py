@@ -5,7 +5,7 @@ class GradioComponentsHTML:
         '''Create HTML for the header'''
         return '''
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px;">
-            <h1 style="margin-left: 0px; font-size: 35px;">ShortGPT</h1>
+            <h1 style="margin-left: 0px; font-size: 35px;">Nhat ShortGPT</h1>
             <div style="flex-grow: 1; text-align: right;">
                 <a href="https://discord.gg/bWreuAyRaj" target="_blank" style="text-decoration: none;">
                 <button style="margin-right: 10px; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #7289DA; border: none; border-radius: 5px; cursor: pointer;">Join Discord</button>

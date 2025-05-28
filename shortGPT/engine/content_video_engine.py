@@ -22,7 +22,7 @@ class ContentVideoEngine(AbstractContentEngine):
 
     def __init__(self, voiceModule: VoiceModule, script: str, background_music_name="", id="",
                  watermark=None, isVerticalFormat=False, language: Language = Language.ENGLISH, 
-                 auto_music=True):
+                 auto_music=True, persistent_text=None):
         super().__init__(id, "general_video", language, voiceModule)
         if not id:
             if (watermark):
@@ -34,6 +34,7 @@ class ContentVideoEngine(AbstractContentEngine):
                 self._db_background_music_name = ""
             self._db_script = script
             self._db_format_vertical = isVerticalFormat
+            self._db_persistent_text = persistent_text
 
         self.stepDict = {
             1:  self._generateTempAudio,
@@ -177,6 +178,16 @@ class ContentVideoEngine(AbstractContentEngine):
                 videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_VIDEO, {'url': video_url,
                                                                               'set_time_start': t1,
                                                                               'set_time_end': t2})
+
+            # Add persistent text if specified
+            if hasattr(self, '_db_persistent_text') and self._db_persistent_text:
+                caption_type = EditingStep.ADD_CAPTION_SHORT_ARABIC if self._db_language == Language.ARABIC.value else EditingStep.ADD_CAPTION_SHORT
+                videoEditor.addEditingStep(caption_type, {
+                    'text': self._db_persistent_text.upper(),
+                    'set_time_start': 0,
+                    'set_time_end': self._db_voiceover_duration
+                })
+
             if (self._db_format_vertical):
                 caption_type = EditingStep.ADD_CAPTION_SHORT_ARABIC if self._db_language == Language.ARABIC.value else EditingStep.ADD_CAPTION_SHORT
             else:
