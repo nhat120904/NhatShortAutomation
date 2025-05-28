@@ -69,7 +69,7 @@ def ChunkForAudio(alltext, chunk_size=2500):
     return chunks
 
 
-def audioToText(filename, model_size="base"):
+def audioToText(filename, model_size="openai/whisper-large-v3"):
     from whisper_timestamped import load_model, transcribe_timestamped
     global WHISPER_MODEL
     if (WHISPER_MODEL == None):
