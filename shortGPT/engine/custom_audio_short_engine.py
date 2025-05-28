@@ -3,16 +3,19 @@ from shortGPT.config.languages import Language
 from shortGPT.engine.content_short_engine import ContentShortEngine
 from shortGPT.editing_framework.editing_engine import (EditingEngine,
                                                        EditingStep)
+from shortGPT.audio.audio_duration import get_asset_duration
+from shortGPT.audio import audio_utils
 import os
+import shutil
 
-class CustomTextShortEngine(ContentShortEngine):
+class CustomAudioShortEngine(ContentShortEngine):
 
-    def __init__(self, voiceModule: VoiceModule, custom_text: str, background_video_name: str, background_music_name: str, short_id="",
+    def __init__(self, voiceModule: VoiceModule, custom_audio_path: str, background_video_name: str, background_music_name: str, short_id="",
                  num_images=None, watermark=None, language: Language = Language.ENGLISH):
-        super().__init__(short_id=short_id, short_type="custom_text_shorts", background_video_name=background_video_name, background_music_name=background_music_name,
+        super().__init__(short_id=short_id, short_type="custom_audio_shorts", background_video_name=background_video_name, background_music_name=background_music_name,
                  num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule)
         
-        self._db_custom_text = custom_text
+        self._db_custom_audio_path = custom_audio_path
         self.stepDict = {
             1:  self._generateScript,
             2:  self._generateTempAudio,
@@ -28,26 +31,62 @@ class CustomTextShortEngine(ContentShortEngine):
 
     def _generateScript(self):
         """
-        Uses the provided custom text as the script instead of generating it with LLM.
+        Skip script generation since we're using uploaded audio directly.
+        Set a placeholder script for downstream processes that might need it.
         """
-        if not self._db_custom_text or not self._db_custom_text.strip():
-            raise ValueError("Custom text cannot be empty. Please provide text content for the video.")
-        
-        self._db_script = self._db_custom_text.strip() 
+        self._db_script = "Custom audio content (script generated from uploaded audio)"
 
     def _generateTempAudio(self):
-        if not self._db_script:
-            raise NotImplementedError("generateScript method must set self._db_script.")
-        if (self._db_temp_audio_path):
-            return
-        self.verifyParameters(text=self._db_script)
-        script = self._db_script
-        # if (self._db_language != Language.ENGLISH.value):
-        #     self._db_translated_script = gpt_translate.translateContent(script, self._db_language)
-        #     script = self._db_translated_script
-        self._db_temp_audio_path = self.voiceModule.generate_voice(
-            script, self.dynamicAssetDir + "temp_audio_path.wav")
+        """
+        Skip audio generation and use the uploaded audio file directly.
+        Copy the uploaded audio to the temp audio path.
+        """
+        if not self._db_custom_audio_path:
+            raise ValueError("Custom audio path cannot be empty. Please upload an audio file.")
         
+        if not os.path.exists(self._db_custom_audio_path):
+            raise ValueError(f"Audio file does not exist: {self._db_custom_audio_path}")
+        
+        # Copy the uploaded audio to our temp location
+        temp_audio_path = self.dynamicAssetDir + "temp_audio_path.wav"
+        
+        # Convert to WAV format if needed and copy
+        try:
+            if self._db_custom_audio_path.lower().endswith(('.mp3', '.m4a', '.aac', '.flac', '.ogg')):
+                # Convert to WAV format using FFmpeg
+                import subprocess
+                result = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', self._db_custom_audio_path, 
+                                       '-ar', '44100', '-ac', '2', temp_audio_path], 
+                                      capture_output=True, text=True)
+                if result.returncode != 0:
+                    raise Exception(f"FFmpeg conversion failed: {result.stderr}")
+            else:
+                # If already WAV or supported format, just copy
+                shutil.copy2(self._db_custom_audio_path, temp_audio_path)
+            
+            self._db_temp_audio_path = temp_audio_path
+            self.logger("Using uploaded audio file as voice content")
+            
+        except Exception as e:
+            raise ValueError(f"Failed to process uploaded audio file: {str(e)}")
+
+    def _speedUpAudio(self):
+        """
+        Use the uploaded audio as-is without speed adjustment.
+        Just copy temp audio to final audio path.
+        """
+        if self._db_audio_path:
+            return
+            
+        self.verifyParameters(tempAudioPath=self._db_temp_audio_path)
+        
+        # Use the audio as-is without speed modification
+        final_audio_path = self.dynamicAssetDir + "audio_voice.wav"
+        shutil.copy2(self._db_temp_audio_path, final_audio_path)
+        self._db_audio_path = final_audio_path
+        
+        self.logger("Using uploaded audio without speed modification")
+
     def _editAndRenderShort(self):
         self.verifyParameters(
             voiceover_audio_url=self._db_audio_path,
@@ -76,11 +115,6 @@ class CustomTextShortEngine(ContentShortEngine):
                 videoEditor.addEditingStep(caption_type, {'text': text.upper(),
                                                           'set_time_start': timing[0],
                                                           'set_time_end': timing[1]})
-            # if self._db_num_images:
-            #     for timing, image_url in self._db_timed_image_urls:
-            #         videoEditor.addEditingStep(EditingStep.SHOW_IMAGE, {'url': image_url,
-            #                                                             'set_time_start': timing[0],
-            #                                                             'set_time_end': timing[1]})
             print("***** SCHEMA FOR RENDERING ****")
             print(videoEditor.dumpEditingSchema())
             print("***** SCHEMA FOR RENDERING ****")

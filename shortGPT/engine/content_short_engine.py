@@ -163,8 +163,13 @@ class ContentShortEngine(AbstractContentEngine):
         if not os.path.exists(date_folder_path):
             os.makedirs(date_folder_path)
 
-        self._db_yt_title, self._db_yt_description = gpt_yt.generate_title_description_dict(self._db_script)
-
+        try:
+            self._db_yt_title, self._db_yt_description = gpt_yt.generate_title_description_dict(self._db_script)
+        except Exception as e:
+            self.logger(f"Error generating YouTube title and description: {e}")
+            self._db_yt_title = "Short Video"
+            self._db_yt_description = "This is a short video."
+            
         time_str = now.strftime("%H-%M-%S")
         newFileName = f"{date_folder_path}/{time_str} - " + \
             re.sub(r"[^a-zA-Z0-9 '\n\.]", '', self._db_yt_title)
