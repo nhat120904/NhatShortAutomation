@@ -10,24 +10,43 @@ import shutil
 
 class CustomAudioShortEngine(ContentShortEngine):
 
-    def __init__(self, voiceModule: VoiceModule, custom_audio_path: str, background_video_name: str, background_music_name: str, short_id="",
+    def __init__(self, voiceModule: VoiceModule, custom_audio_path: str, background_video_name: str = "", background_music_name: str = "", background_image_name: str = "", short_id="",
                  num_images=None, watermark=None, language: Language = Language.ENGLISH):
+        # Initialize with background_video_name even if using image (for compatibility)
         super().__init__(short_id=short_id, short_type="custom_audio_shorts", background_video_name=background_video_name, background_music_name=background_music_name,
                  num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule)
         
         self._db_custom_audio_path = custom_audio_path
-        self.stepDict = {
-            1:  self._generateScript,
-            2:  self._generateTempAudio,
-            3:  self._speedUpAudio,
-            4:  self._timeCaptions,
-            5:  self._chooseBackgroundMusic,
-            6:  self._chooseBackgroundVideo,
-            7:  self._prepareBackgroundAssets,
-            8: self._prepareCustomAssets,
-            9: self._editAndRenderShort,
-            10: self._addYoutubeMetadata,
-        }
+        self._db_background_image_name = background_image_name
+        self._use_background_image = bool(background_image_name)
+        
+        # Modify step dict to handle background image vs video
+        if self._use_background_image:
+            self.stepDict = {
+                1:  self._generateScript,
+                2:  self._generateTempAudio,
+                3:  self._speedUpAudio,
+                4:  self._timeCaptions,
+                5:  self._chooseBackgroundMusic,
+                6:  self._chooseBackgroundImage,
+                7:  self._prepareBackgroundAssets,
+                8: self._prepareCustomAssets,
+                9: self._editAndRenderShort,
+                10: self._addYoutubeMetadata,
+            }
+        else:
+            self.stepDict = {
+                1:  self._generateScript,
+                2:  self._generateTempAudio,
+                3:  self._speedUpAudio,
+                4:  self._timeCaptions,
+                5:  self._chooseBackgroundMusic,
+                6:  self._chooseBackgroundVideo,
+                7:  self._prepareBackgroundAssets,
+                8: self._prepareCustomAssets,
+                9: self._editAndRenderShort,
+                10: self._addYoutubeMetadata,
+            }
 
     def _generateScript(self):
         """
@@ -35,6 +54,36 @@ class CustomAudioShortEngine(ContentShortEngine):
         Set a placeholder script for downstream processes that might need it.
         """
         self._db_script = "Custom audio content (script generated from uploaded audio)"
+
+    def _chooseBackgroundImage(self):
+        """
+        Choose background image instead of background video.
+        """
+        from shortGPT.config.asset_db import AssetDatabase
+        self._db_background_image_url = AssetDatabase.get_asset_link(
+            self._db_background_image_name)
+
+    def _prepareBackgroundAssets(self):
+        """
+        Prepare background assets - either video or image based on configuration.
+        """
+        self.verifyParameters(voiceover_audio_url=self._db_audio_path)
+        if not self._db_voiceover_duration:
+            self.logger("Rendering short: (1/4) preparing voice asset...")
+            self._db_audio_path, self._db_voiceover_duration = get_asset_duration(
+                self._db_audio_path, isVideo=False)
+        
+        if self._use_background_image:
+            # For background images, we don't need to trim like videos
+            self.logger("Rendering short: (2/4) preparing background image asset...")
+            # Image will be displayed for the entire duration of the voiceover
+        else:
+            # Original video preparation logic
+            if not self._db_background_trimmed:
+                self.logger("Rendering short: (2/4) preparing background video asset...")
+                from shortGPT.editing_utils.handle_videos import extract_random_clip_from_video
+                self._db_background_trimmed = extract_random_clip_from_video(
+                    self._db_background_video_url, self._db_background_video_duration, self._db_voiceover_duration, self.dynamicAssetDir + "clipped_background.mp4")
 
     def _generateTempAudio(self):
         """
@@ -88,10 +137,18 @@ class CustomAudioShortEngine(ContentShortEngine):
         self.logger("Using uploaded audio without speed modification")
 
     def _editAndRenderShort(self):
-        self.verifyParameters(
-            voiceover_audio_url=self._db_audio_path,
-            video_duration=self._db_background_video_duration,
-            music_url=self._db_background_music_url)
+        if self._use_background_image:
+            # Verify parameters for background image
+            self.verifyParameters(
+                voiceover_audio_url=self._db_audio_path,
+                music_url=self._db_background_music_url,
+                background_image_url=self._db_background_image_url)
+        else:
+            # Original verification for background video
+            self.verifyParameters(
+                voiceover_audio_url=self._db_audio_path,
+                video_duration=self._db_background_video_duration,
+                music_url=self._db_background_music_url)
 
         outputPath = self.dynamicAssetDir+"rendered_video.mp4"
         if not (os.path.exists(outputPath)):
@@ -102,8 +159,18 @@ class CustomAudioShortEngine(ContentShortEngine):
             videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {'url': self._db_background_music_url,
                                                                           'loop_background_music': self._db_voiceover_duration,
                                                                           "volume_percentage": 0.11})
-            videoEditor.addEditingStep(EditingStep.CROP_1920x1080, {
-                                       'url': self._db_background_trimmed})
+            
+            if self._use_background_image:
+                # Add background image for the entire duration
+                videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_IMAGE, {
+                                           'url': self._db_background_image_url,
+                                           'set_time_start': 0,
+                                           'set_time_end': self._db_voiceover_duration})
+            else:
+                # Original background video logic
+                videoEditor.addEditingStep(EditingStep.CROP_1920x1080, {
+                                           'url': self._db_background_trimmed})
+            
             # videoEditor.addEditingStep(EditingStep.ADD_SUBSCRIBE_ANIMATION, {'url': AssetDatabase.get_asset_link('subscribe animation')})
 
             if self._db_watermark:

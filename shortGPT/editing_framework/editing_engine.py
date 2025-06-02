@@ -27,6 +27,7 @@ class EditingStep(Enum):
     ADD_BACKGROUND_MUSIC = "background_music.json"
     ADD_REDDIT_IMAGE = "show_reddit_image.json"
     ADD_BACKGROUND_VIDEO = "add_background_video.json"
+    ADD_BACKGROUND_IMAGE = "add_background_image.json"
     INSERT_AUDIO = "insert_audio.json"
     EXTRACT_AUDIO = "extract_audio.json"
     ADD_BACKGROUND_VOICEOVER = "add_background_voiceover.json"

@@ -17,6 +17,7 @@ class AssetComponentsUtils:
 
     instance_background_video_checkbox = None
     instance_background_music_checkbox = None
+    instance_background_image_checkbox = None
     instance_voiceChoice: dict[gr.Radio] = {}
     instance_voiceChoiceTranslation: dict[gr.Radio] = {}
 
@@ -30,6 +31,12 @@ class AssetComponentsUtils:
     def getBackgroundMusicChoices(cls):
         df = AssetDatabase.get_df()
         choices = list(df.loc["background music" == df["type"]]["name"])[:20]
+        return choices
+
+    @classmethod
+    def getBackgroundImageChoices(cls):
+        df = AssetDatabase.get_df()
+        choices = list(df.loc["image" == df["type"]]["name"])[:20]
         return choices
 
     @classmethod
@@ -55,7 +62,7 @@ class AssetComponentsUtils:
                 choices=choices,
                 interactive=True,
                 label="Choose background video",
-                value=random.choice(choices)
+                value=random.choice(choices) if choices else []
             )
         return cls.instance_background_video_checkbox
 
@@ -67,9 +74,21 @@ class AssetComponentsUtils:
                 choices=choices,
                 interactive=True,
                 label="Choose background music",
-                value=random.choice(choices)
+                value=random.choice(choices) if choices else []
             )
         return cls.instance_background_music_checkbox
+
+    @classmethod
+    def background_image_checkbox(cls):
+        if cls.instance_background_image_checkbox is None:
+            choices = cls.getBackgroundImageChoices()
+            cls.instance_background_image_checkbox = gr.CheckboxGroup(
+                choices=choices,
+                interactive=True,
+                label="Choose background image",
+                value=random.choice(choices) if choices else []
+            )
+        return cls.instance_background_image_checkbox
 
     @classmethod
     def voiceChoice(cls, provider: str = None):

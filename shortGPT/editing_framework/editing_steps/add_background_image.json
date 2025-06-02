@@ -1,0 +1,36 @@
+{
+	"background_image": {
+		"type": "image",
+		"z": 0,
+		"inputs":{
+			"parameters": ["url"],
+            "actions": ["set_time_start", "set_time_end"]
+		},
+		"parameters": {
+			"url": null
+		},
+		"actions": [
+			{
+				"type": "set_time_start",
+				"param": null
+			},
+			{
+				"type": "set_time_end",
+				"param": null
+			},
+			{
+				"type": "resize",
+				"param": {
+					"width": 1080,
+					"height": 1920
+				}
+			},
+			{
+				"type": "screen_position",
+				"param": {
+					"pos": ["center", "center"]
+				}
+			}
+		]
+	}
+} 

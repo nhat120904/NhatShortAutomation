@@ -47,14 +47,14 @@ class AssetLibrary(AbstractComponentUI):
                         gr.Markdown("Preview")
                         asset_preview_ui = gr.HTML(self.__get_first_preview)
                         delete_button = gr.Button("🗑️ Delete", scale=0, variant="primary")
-                        delete_button.click(self.__delete_clicked, [delete_button], [asset_dataframe_ui, asset_preview_ui, delete_button, AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox()])
+                        delete_button.click(self.__delete_clicked, [delete_button], [asset_dataframe_ui, asset_preview_ui, delete_button, AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox(), AssetComponentsUtils.background_image_checkbox()])
                         asset_dataframe_ui.select(self.__preview_asset, [asset_dataframe_ui], [asset_preview_ui, delete_button])
 
                 add_youtube_link.click(
-                    self.__verify_youtube_asset_inputs, [asset_name, youtube_url, asset_type], []).success(self.__add_youtube_asset, [asset_name, youtube_url, asset_type], [asset_dataframe_ui, asset_preview_ui, delete_button, accordion, AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox()]).success(lambda: gr.update(open=False), [accordion])
+                    self.__verify_youtube_asset_inputs, [asset_name, youtube_url, asset_type], []).success(self.__add_youtube_asset, [asset_name, youtube_url, asset_type], [asset_dataframe_ui, asset_preview_ui, delete_button, accordion, AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox(), AssetComponentsUtils.background_image_checkbox()]).success(lambda: gr.update(open=False), [accordion])
 
                 upload_button.click(
-                    self.__verify_and_upload_local_asset, [upload_type, local_upload_name, video_upload, audio_upload, image_upload, ], []).success(self.__upload_local_asset, [upload_type, local_upload_name, video_upload, audio_upload, image_upload, ], [asset_dataframe_ui, asset_preview_ui, delete_button, accordion, AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox()]).success(lambda: gr.update(open=False), [accordion])
+                    self.__verify_and_upload_local_asset, [upload_type, local_upload_name, video_upload, audio_upload, image_upload, ], []).success(self.__upload_local_asset, [upload_type, local_upload_name, video_upload, audio_upload, image_upload, ], [asset_dataframe_ui, asset_preview_ui, delete_button, accordion, AssetComponentsUtils.background_video_checkbox(), AssetComponentsUtils.background_music_checkbox(), AssetComponentsUtils.background_image_checkbox()]).success(lambda: gr.update(open=False), [accordion])
 
         return asset_library_ui
 
@@ -96,7 +96,8 @@ class AssetLibrary(AbstractComponentUI):
             gr.update(value=f"🗑️ Delete {latest_df.iloc[0]['name']}"),\
             gr.update(open=False),\
             gr.update(choices=AssetComponentsUtils.getBackgroundVideoChoices(), interactive=True),\
-            gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True)
+            gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True),\
+            gr.update(choices=AssetComponentsUtils.getBackgroundImageChoices(), interactive=True)
 
     def __get_first_preview(self):
         '''Get the first preview'''
@@ -112,12 +113,14 @@ class AssetLibrary(AbstractComponentUI):
                 gr.update(value=self.__get_asset_embed(data, 0)),\
                 gr.update(value=f"🗑️ Delete {data.iloc[0]['name']}"),\
                 gr.update(choices=AssetComponentsUtils.getBackgroundVideoChoices(), interactive=True),\
-                gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True)
+                gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True),\
+                gr.update(choices=AssetComponentsUtils.getBackgroundImageChoices(), interactive=True)
         return gr.update(value=data),\
             gr.update(visible=True),\
             gr.update(value="🗑️ Delete"),\
             gr.update(choices=AssetComponentsUtils.getBackgroundVideoChoices(), interactive=True),\
-            gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True)
+            gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True),\
+            gr.update(choices=AssetComponentsUtils.getBackgroundImageChoices(), interactive=True)
 
     def __preview_asset(self, data, evt: gr.SelectData):
         '''Preview the asset with the given name'''
@@ -194,4 +197,5 @@ class AssetLibrary(AbstractComponentUI):
             gr.update(value=f"🗑️ Delete {latest_df.iloc[0]['name']}"),\
             gr.update(open=False),\
             gr.update(choices=AssetComponentsUtils.getBackgroundVideoChoices(), interactive=True),\
-            gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True)
+            gr.update(choices=AssetComponentsUtils.getBackgroundMusicChoices(), interactive=True),\
+            gr.update(choices=AssetComponentsUtils.getBackgroundImageChoices(), interactive=True)

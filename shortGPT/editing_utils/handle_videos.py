@@ -39,7 +39,7 @@ def extract_random_clip_from_video(video_url, video_duration, clip_duration, out
     print(f"output file: {output_file}")
     if not video_duration:
         raise Exception("Could not get video duration")
-    if not video_duration*0.7 > 120:
+    if not video_duration*0.7 > 10:
         raise Exception("Video too short")
     start_time = video_duration*0.15 + random.random()* (0.7*video_duration-clip_duration)
     
