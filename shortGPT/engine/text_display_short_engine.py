@@ -70,24 +70,23 @@ class TextDisplayShortEngine(ContentShortEngine):
         """Edit and render the final video"""
         if self._use_background_image:
             self.verifyParameters(
-                music_url=self._db_background_music_url,
                 background_image_url=self._db_background_image_url)
         else:
             self.verifyParameters(
-                video_duration=self._db_background_video_duration,
-                music_url=self._db_background_music_url)
+                video_duration=self._db_background_video_duration)
 
         outputPath = self.dynamicAssetDir + "rendered_video.mp4"
         if not os.path.exists(outputPath):
             self.logger("Rendering short: Starting automated editing...")
             videoEditor = EditingEngine()
             
-            # Add background music
-            videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {
-                'url': self._db_background_music_url,
-                'loop_background_music': self._db_duration,
-                "volume_percentage": 0.19
-            })
+            # Add background music only if it's specified
+            if self._db_background_music_url:
+                videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {
+                    'url': self._db_background_music_url,
+                    'loop_background_music': self._db_duration,
+                    "volume_percentage": 0.5
+                })
             
             if self._use_background_image:
                 # Add background image for the entire duration

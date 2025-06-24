@@ -144,7 +144,11 @@ class ShortAutomationUI(AbstractComponentUI):
                 background_videos = [None] * numShorts
                 background_images = (background_image_list * ((numShorts // len(background_image_list)) + 1))[:numShorts]
             
-            background_musics = (background_music_list * ((numShorts // len(background_music_list)) + 1))[:numShorts]
+            # Handle background music assignment - optional
+            if background_music_list:
+                background_musics = (background_music_list * ((numShorts // len(background_music_list)) + 1))[:numShorts]
+            else:
+                background_musics = [""] * numShorts  # Empty string for no background music
             
             # For Custom Audio shorts and Text Display shorts, we don't need TTS
             if short_type in ["Custom Audio shorts", "Text Display shorts"]:
@@ -220,8 +224,7 @@ class ShortAutomationUI(AbstractComponentUI):
             if not background_image_list:
                 raise gr.Error("Please select at least one background image.")
 
-        if not background_music_list:
-            raise gr.Error("Please select at least one background music.")
+        # Background music is now optional - no validation required
 
         if watermark != "":
             if not watermark.replace(" ", "").isalnum():
@@ -247,19 +250,19 @@ class ShortAutomationUI(AbstractComponentUI):
 
     def create_short_engine(self, short_type, voice_module, language, numImages, watermark, background_video, background_music, background_image, facts_subject, custom_text=None, custom_audio=None, display_text=None, video_duration=None):
         if short_type == "Reddit Story shorts":
-            return RedditShortEngine(voice_module, background_video_name=background_video, background_music_name=background_music, num_images=numImages, watermark=watermark, language=language)
+            return RedditShortEngine(voice_module, background_video_name=background_video, background_music_name=background_music or "", num_images=numImages, watermark=watermark, language=language)
         if short_type == "Custom Text shorts":
-            return CustomTextShortEngine(voice_module, custom_text=custom_text, background_video_name=background_video or "", background_music_name=background_music, background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language)
+            return CustomTextShortEngine(voice_module, custom_text=custom_text, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language)
         if short_type == "Custom Audio shorts":
             # Extract the file path from the uploaded file
             custom_audio_path = custom_audio.name if custom_audio and hasattr(custom_audio, 'name') else custom_audio
-            return CustomAudioShortEngine(voice_module, custom_audio_path=custom_audio_path, background_video_name=background_video or "", background_music_name=background_music, background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language)
+            return CustomAudioShortEngine(voice_module, custom_audio_path=custom_audio_path, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language)
         if short_type == "Text Display shorts":
-            return TextDisplayShortEngine(text=display_text, duration=video_duration, background_video_name=background_video or "", background_music_name=background_music, background_image_name=background_image or "", watermark=watermark, language=language)
+            return TextDisplayShortEngine(text=display_text, duration=video_duration, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", watermark=watermark, language=language)
         if "fact" in short_type.lower():
             if "custom" in short_type.lower():
                 facts_subject = facts_subject
             else:
                 facts_subject = short_type
-            return FactsShortEngine(voice_module, facts_type=facts_subject, background_video_name=background_video, background_music_name=background_music, num_images=numImages, watermark=watermark, language=language)
+            return FactsShortEngine(voice_module, facts_type=facts_subject, background_video_name=background_video, background_music_name=background_music or "", num_images=numImages, watermark=watermark, language=language)
         raise gr.Error(f"Short type does not have a valid short engine: {short_type}")

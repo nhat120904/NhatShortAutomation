@@ -53,7 +53,7 @@ def extract_random_clip_from_video(video_url, video_duration, clip_duration, out
         '-preset', 'ultrafast',
         output_file
     ]
-    print(f"command: {command}")
+    # print(f"command: {command}")
     
     subprocess.run(command, check=True)
     

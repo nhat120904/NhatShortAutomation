@@ -87,7 +87,10 @@ class ContentShortEngine(AbstractContentEngine):
                 self._db_timed_image_searches)
 
     def _chooseBackgroundMusic(self):
-        self._db_background_music_url = AssetDatabase.get_asset_link(self._db_background_music_name)
+        if self._db_background_music_name:
+            self._db_background_music_url = AssetDatabase.get_asset_link(self._db_background_music_name)
+        else:
+            self._db_background_music_url = None
 
     def _chooseBackgroundVideo(self):
         self._db_background_video_url = AssetDatabase.get_asset_link(
@@ -99,7 +102,7 @@ class ContentShortEngine(AbstractContentEngine):
         self.verifyParameters(
             voiceover_audio_url=self._db_audio_path,
             video_duration=self._db_background_video_duration,
-            background_video_url=self._db_background_video_url, music_url=self._db_background_music_url)
+            background_video_url=self._db_background_video_url)
         if not self._db_voiceover_duration:
             self.logger("Rendering short: (1/4) preparing voice asset...")
             self._db_audio_path, self._db_voiceover_duration = get_asset_duration(
@@ -116,8 +119,7 @@ class ContentShortEngine(AbstractContentEngine):
     def _editAndRenderShort(self):
         self.verifyParameters(
             voiceover_audio_url=self._db_audio_path,
-            video_duration=self._db_background_video_duration,
-            music_url=self._db_background_music_url)
+            video_duration=self._db_background_video_duration)
 
         outputPath = self.dynamicAssetDir+"rendered_video.mp4"
         if not (os.path.exists(outputPath)):
@@ -125,9 +127,12 @@ class ContentShortEngine(AbstractContentEngine):
             videoEditor = EditingEngine()
             videoEditor.addEditingStep(EditingStep.ADD_VOICEOVER_AUDIO, {
                                        'url': self._db_audio_path})
-            videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {'url': self._db_background_music_url,
-                                                                          'loop_background_music': self._db_voiceover_duration,
-                                                                          "volume_percentage": 0.11})
+            
+            # Add background music only if it's specified
+            if self._db_background_music_url:
+                videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {'url': self._db_background_music_url,
+                                                                              'loop_background_music': self._db_voiceover_duration,
+                                                                              "volume_percentage": 0.11})
             videoEditor.addEditingStep(EditingStep.CROP_1920x1080, {
                                        'url': self._db_background_trimmed})
             # videoEditor.addEditingStep(EditingStep.ADD_SUBSCRIBE_ANIMATION, {'url': AssetDatabase.get_asset_link('subscribe animation')})

@@ -47,6 +47,9 @@ class CustomAudioShortEngine(ContentShortEngine):
                 9: self._editAndRenderShort,
                 10: self._addYoutubeMetadata,
             }
+        
+        # Note: We now keep the _chooseBackgroundMusic step even when no background music is specified
+        # The _chooseBackgroundMusic method will handle setting _db_background_music_url to None if needed
 
     def _generateScript(self):
         """
@@ -62,6 +65,16 @@ class CustomAudioShortEngine(ContentShortEngine):
         from shortGPT.config.asset_db import AssetDatabase
         self._db_background_image_url = AssetDatabase.get_asset_link(
             self._db_background_image_name)
+
+    def _chooseBackgroundMusic(self):
+        """
+        Choose background music. Set to None if no background music is specified.
+        """
+        if self._db_background_music_name:
+            from shortGPT.config.asset_db import AssetDatabase
+            self._db_background_music_url = AssetDatabase.get_asset_link(self._db_background_music_name)
+        else:
+            self._db_background_music_url = None
 
     def _prepareBackgroundAssets(self):
         """
@@ -141,14 +154,12 @@ class CustomAudioShortEngine(ContentShortEngine):
             # Verify parameters for background image
             self.verifyParameters(
                 voiceover_audio_url=self._db_audio_path,
-                music_url=self._db_background_music_url,
                 background_image_url=self._db_background_image_url)
         else:
             # Original verification for background video
             self.verifyParameters(
                 voiceover_audio_url=self._db_audio_path,
-                video_duration=self._db_background_video_duration,
-                music_url=self._db_background_music_url)
+                video_duration=self._db_background_video_duration)
 
         outputPath = self.dynamicAssetDir+"rendered_video.mp4"
         if not (os.path.exists(outputPath)):
@@ -156,9 +167,12 @@ class CustomAudioShortEngine(ContentShortEngine):
             videoEditor = EditingEngine()
             videoEditor.addEditingStep(EditingStep.ADD_VOICEOVER_AUDIO, {
                                        'url': self._db_audio_path})
-            videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {'url': self._db_background_music_url,
-                                                                          'loop_background_music': self._db_voiceover_duration,
-                                                                          "volume_percentage": 0.11})
+            
+            # Add background music only if it's specified
+            if self._db_background_music_url:
+                videoEditor.addEditingStep(EditingStep.ADD_BACKGROUND_MUSIC, {'url': self._db_background_music_url,
+                                                                              'loop_background_music': self._db_voiceover_duration,
+                                                                              "volume_percentage": 0.11})
             
             if self._use_background_image:
                 # Add background image for the entire duration
