@@ -1,0 +1,24 @@
+{
+	"video_effect": {
+		"type": "video",
+		"z": 1,
+		"inputs": {
+			"parameters": ["url", "effect_type", "effect_params"]
+		},
+		"parameters": {
+			"url": null,
+			"audio": true,
+			"effect_type": "none",
+			"effect_params": {}
+		},
+		"actions": [
+			{
+				"type": "video_effect",
+				"param": {
+					"effect_type": null,
+					"effect_params": {}
+				}
+			}
+		]
+	}
+} 

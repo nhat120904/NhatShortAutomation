@@ -169,6 +169,18 @@ class CoreEditingEngine:
                     clip = clip.with_effects([vfx.Resize((width, width/ar))])
                 continue
 
+            if action['type'] == 'video_effect':
+                from shortGPT.editing_utils.video_effects import VideoEffect, apply_video_effect
+                effect_type = action['param'].get('effect_type', 'none')
+                effect_params = action['param'].get('effect_params', {})
+                
+                try:
+                    effect_enum = VideoEffect(effect_type)
+                    clip = apply_video_effect(clip, effect_enum, **effect_params)
+                except ValueError:
+                    print(f"Warning: Unknown video effect '{effect_type}', skipping...")
+                continue
+
         return clip
 
     # Process audio actions

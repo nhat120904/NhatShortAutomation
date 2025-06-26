@@ -7,9 +7,9 @@ from shortGPT.engine.content_short_engine import ContentShortEngine
 class FactsShortEngine(ContentShortEngine):
 
     def __init__(self, voiceModule: VoiceModule, facts_type: str, background_video_name: str, background_music_name: str,short_id="",
-                 num_images=None, watermark=None, language:Language = Language.ENGLISH):
+                 num_images=None, watermark=None, language:Language = Language.ENGLISH, video_effect=None, video_effect_params=None):
         super().__init__(short_id=short_id, short_type="facts_shorts", background_video_name=background_video_name, background_music_name=background_music_name,
-                 num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule)
+                 num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule, video_effect=video_effect, video_effect_params=video_effect_params)
         
         self._db_facts_type = facts_type
 
