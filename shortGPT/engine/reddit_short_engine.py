@@ -10,9 +10,9 @@ import os
 class RedditShortEngine(ContentShortEngine):
     # Mapping of variable names to database paths
     def __init__(self,voiceModule: VoiceModule, background_video_name: str, background_music_name: str,short_id="",
-                 num_images=None, watermark=None, language:Language = Language.ENGLISH):
+                 num_images=None, watermark=None, language:Language = Language.ENGLISH, video_effect=None, video_effect_params=None):
         super().__init__(short_id=short_id, short_type="reddit_shorts", background_video_name=background_video_name, background_music_name=background_music_name,
-                 num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule)
+                 num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule, video_effect=video_effect, video_effect_params=video_effect_params)
     
     def __generateRandomStory(self):
         question = reddit_gpt.getInterestingRedditQuestion()
@@ -80,6 +80,14 @@ class RedditShortEngine(ContentShortEngine):
                                                                           "volume_percentage": 0.11})
             videoEditor.addEditingStep(EditingStep.CROP_1920x1080, {
                                        'url': self._db_background_trimmed})
+            
+            # Apply video effect if specified
+            if self._db_video_effect and self._db_video_effect != "none":
+                videoEditor.addEditingStep(EditingStep.APPLY_VIDEO_EFFECT, {
+                                           'url': self._db_background_trimmed,
+                                           'effect_type': self._db_video_effect,
+                                           'effect_params': self._db_video_effect_params})
+            
             videoEditor.addEditingStep(EditingStep.ADD_SUBSCRIBE_ANIMATION, {'url': AssetDatabase.get_asset_link('subscribe animation')})
 
             if self._db_watermark:

@@ -11,10 +11,10 @@ import shutil
 class CustomAudioShortEngine(ContentShortEngine):
 
     def __init__(self, voiceModule: VoiceModule, custom_audio_path: str, background_video_name: str = "", background_music_name: str = "", background_image_name: str = "", short_id="",
-                 num_images=None, watermark=None, language: Language = Language.ENGLISH):
+                 num_images=None, watermark=None, language: Language = Language.ENGLISH, video_effect=None, video_effect_params=None):
         # Initialize with background_video_name even if using image (for compatibility)
         super().__init__(short_id=short_id, short_type="custom_audio_shorts", background_video_name=background_video_name, background_music_name=background_music_name,
-                 num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule)
+                 num_images=num_images, watermark=watermark, language=language, voiceModule=voiceModule, video_effect=video_effect, video_effect_params=video_effect_params)
         
         self._db_custom_audio_path = custom_audio_path
         self._db_background_image_name = background_image_name
@@ -184,6 +184,21 @@ class CustomAudioShortEngine(ContentShortEngine):
                 # Original background video logic
                 videoEditor.addEditingStep(EditingStep.CROP_1920x1080, {
                                            'url': self._db_background_trimmed})
+            
+            # Apply video effect if specified
+            if self._db_video_effect and self._db_video_effect != "none":
+                if self._use_background_image:
+                    # For background images, apply effect to the generated video
+                    videoEditor.addEditingStep(EditingStep.APPLY_VIDEO_EFFECT, {
+                                               'url': self._db_background_image_url,
+                                               'effect_type': self._db_video_effect,
+                                               'effect_params': self._db_video_effect_params})
+                else:
+                    # For background videos, apply effect to the trimmed video
+                    videoEditor.addEditingStep(EditingStep.APPLY_VIDEO_EFFECT, {
+                                               'url': self._db_background_trimmed,
+                                               'effect_type': self._db_video_effect,
+                                               'effect_params': self._db_video_effect_params})
             
             # videoEditor.addEditingStep(EditingStep.ADD_SUBSCRIBE_ANIMATION, {'url': AssetDatabase.get_asset_link('subscribe animation')})
 

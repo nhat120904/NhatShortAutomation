@@ -19,6 +19,7 @@ from shortGPT.engine.reddit_short_engine import RedditShortEngine
 from shortGPT.engine.custom_text_short_engine import CustomTextShortEngine
 from shortGPT.engine.custom_audio_short_engine import CustomAudioShortEngine
 from shortGPT.engine.text_display_short_engine import TextDisplayShortEngine
+from shortGPT.editing_utils.video_effects import get_video_effect_options
 
 class ShortAutomationUI(AbstractComponentUI):
     def __init__(self, shortGptUI: gr.Blocks):
@@ -99,6 +100,54 @@ class ShortAutomationUI(AbstractComponentUI):
                 background_type.change(on_background_type_change, [background_type], [background_video_section, background_image_section])
                 
                 AssetComponentsUtils.background_music_checkbox()
+                
+                # Video Effects Section
+                with gr.Column():
+                    gr.HTML("<h3>🎨 Video Effects</h3>")
+                    video_effect_options = get_video_effect_options()
+                    video_effect_names = list(video_effect_options.keys())
+                    video_effect = gr.Dropdown(
+                        choices=video_effect_names,
+                        value="None",
+                        label="Video Effect",
+                        info="Choose a visual effect to apply to your video"
+                    )
+                    
+                    # Effect parameters (visible based on selected effect)
+                    with gr.Column(visible=False) as darkness_params:
+                        darkness_factor = gr.Slider(
+                            minimum=0.0,
+                            maximum=1.0,
+                            value=0.6,
+                            step=0.1,
+                            label="Darkness Factor",
+                            info="0.0 = completely black, 1.0 = original brightness"
+                        )
+                    
+                    with gr.Column(visible=False) as vignette_params:
+                        vignette_strength = gr.Slider(
+                            minimum=0.0,
+                            maximum=1.0,
+                            value=0.6,
+                            step=0.1,
+                            label="Vignette Strength",
+                            info="0.0 = no effect, 1.0 = maximum vignette"
+                        )
+                    
+                    def on_video_effect_change(effect):
+                        show_darkness = effect in ["Dark Sepia Tone", "Darken Video"]
+                        show_vignette = effect == "Vignette Effect"
+                        return (
+                            gr.update(visible=show_darkness),
+                            gr.update(visible=show_vignette)
+                        )
+                    
+                    video_effect.change(
+                        on_video_effect_change,
+                        [video_effect],
+                        [darkness_params, vignette_params]
+                    )
+                
                 createButton = gr.Button("Create Shorts")
 
                 generation_error = gr.HTML(visible=False)
@@ -125,16 +174,31 @@ class ShortAutomationUI(AbstractComponentUI):
                 custom_audio,
                 display_text,
                 video_duration,
+                video_effect,
+                darkness_factor,
+                vignette_strength,
             ], outputs=[output, video_folder, generation_error])
         self.short_automation = short_automation
         return self.short_automation
 
-    def create_short(self, numShorts, short_type, tts_engine, language_eleven, language_edge, numImages, watermark, background_video_list, background_music_list, background_image_list, background_type, facts_subject, voice_eleven, custom_text, custom_audio, display_text, video_duration, progress=gr.Progress()):
+    def create_short(self, numShorts, short_type, tts_engine, language_eleven, language_edge, numImages, watermark, background_video_list, background_music_list, background_image_list, background_type, facts_subject, voice_eleven, custom_text, custom_audio, display_text, video_duration, video_effect, darkness_factor, vignette_strength, progress=gr.Progress()):
         '''Creates a short'''
 
         try:
             numShorts = int(numShorts)
             numImages = int(numImages) if numImages else None
+            
+            # Prepare video effect parameters
+            video_effect_params = {}
+            if video_effect in ["Dark Sepia Tone", "Darken Video"]:
+                video_effect_params["darkness_factor"] = darkness_factor
+            elif video_effect == "Vignette Effect":
+                video_effect_params["strength"] = vignette_strength
+            
+            # Convert effect name to enum value
+            video_effect_options = get_video_effect_options()
+            video_effect_enum = video_effect_options.get(video_effect, "none")
+            video_effect_value = video_effect_enum.value if hasattr(video_effect_enum, 'value') else "none"
             
             # Choose background assets based on type
             if background_type == "Background Video":
@@ -162,7 +226,7 @@ class ShortAutomationUI(AbstractComponentUI):
                 voice_module = EdgeTTSVoiceModule(EDGE_TTS_VOICENAME_MAPPING[language]['male'])
             for i in range(numShorts):
                 shortEngine = self.create_short_engine(short_type=short_type, voice_module=voice_module, language=language, numImages=numImages, watermark=watermark,
-                                                       background_video=background_videos[i], background_music=background_musics[i], background_image=background_images[i], facts_subject=facts_subject, custom_text=custom_text, custom_audio=custom_audio, display_text=display_text, video_duration=video_duration)
+                                                       background_video=background_videos[i], background_music=background_musics[i], background_image=background_images[i], facts_subject=facts_subject, custom_text=custom_text, custom_audio=custom_audio, display_text=display_text, video_duration=video_duration, video_effect=video_effect_value, video_effect_params=video_effect_params)
                 num_steps = shortEngine.get_total_steps()
 
                 def logger(prog_str):
@@ -248,21 +312,21 @@ class ShortAutomationUI(AbstractComponentUI):
                 raise gr.Error("ELEVENLABS_API_KEY API key is missing. Please go to the config tab and enter the API key.")
         return gr.update(visible=False)
 
-    def create_short_engine(self, short_type, voice_module, language, numImages, watermark, background_video, background_music, background_image, facts_subject, custom_text=None, custom_audio=None, display_text=None, video_duration=None):
+    def create_short_engine(self, short_type, voice_module, language, numImages, watermark, background_video, background_music, background_image, facts_subject, custom_text=None, custom_audio=None, display_text=None, video_duration=None, video_effect=None, video_effect_params=None):
         if short_type == "Reddit Story shorts":
-            return RedditShortEngine(voice_module, background_video_name=background_video, background_music_name=background_music or "", num_images=numImages, watermark=watermark, language=language)
+            return RedditShortEngine(voice_module, background_video_name=background_video, background_music_name=background_music or "", num_images=numImages, watermark=watermark, language=language, video_effect=video_effect, video_effect_params=video_effect_params)
         if short_type == "Custom Text shorts":
-            return CustomTextShortEngine(voice_module, custom_text=custom_text, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language)
+            return CustomTextShortEngine(voice_module, custom_text=custom_text, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language, video_effect=video_effect, video_effect_params=video_effect_params)
         if short_type == "Custom Audio shorts":
             # Extract the file path from the uploaded file
             custom_audio_path = custom_audio.name if custom_audio and hasattr(custom_audio, 'name') else custom_audio
-            return CustomAudioShortEngine(voice_module, custom_audio_path=custom_audio_path, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language)
+            return CustomAudioShortEngine(voice_module, custom_audio_path=custom_audio_path, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", num_images=numImages, watermark=watermark, language=language, video_effect=video_effect, video_effect_params=video_effect_params)
         if short_type == "Text Display shorts":
-            return TextDisplayShortEngine(text=display_text, duration=video_duration, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", watermark=watermark, language=language)
+            return TextDisplayShortEngine(text=display_text, duration=video_duration, background_video_name=background_video or "", background_music_name=background_music or "", background_image_name=background_image or "", watermark=watermark, language=language, video_effect=video_effect, video_effect_params=video_effect_params)
         if "fact" in short_type.lower():
             if "custom" in short_type.lower():
                 facts_subject = facts_subject
             else:
                 facts_subject = short_type
-            return FactsShortEngine(voice_module, facts_type=facts_subject, background_video_name=background_video, background_music_name=background_music or "", num_images=numImages, watermark=watermark, language=language)
+            return FactsShortEngine(voice_module, facts_type=facts_subject, background_video_name=background_video, background_music_name=background_music or "", num_images=numImages, watermark=watermark, language=language, video_effect=video_effect, video_effect_params=video_effect_params)
         raise gr.Error(f"Short type does not have a valid short engine: {short_type}")
