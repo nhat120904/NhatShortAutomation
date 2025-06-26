@@ -49,3 +49,6 @@ uritemplate==4.1.1
 urllib3==2.4.0
 wheel==0.45.1
 transformers
+
+# Formatter
+black
