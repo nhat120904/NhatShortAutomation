@@ -195,10 +195,16 @@ class ShortAutomationUI(AbstractComponentUI):
             elif video_effect == "Vignette Effect":
                 video_effect_params["strength"] = vignette_strength
             
-            # Convert effect name to enum value
-            video_effect_options = get_video_effect_options()
-            video_effect_enum = video_effect_options.get(video_effect, "none")
-            video_effect_value = video_effect_enum.value if hasattr(video_effect_enum, 'value') else "none"
+            # Convert effect name to enum value - handle all possible UI states
+            if video_effect is None or video_effect == "None" or video_effect == "":
+                video_effect_value = "none"
+            else:
+                video_effect_options = get_video_effect_options()
+                video_effect_enum = video_effect_options.get(video_effect)
+                if video_effect_enum is not None:
+                    video_effect_value = video_effect_enum.value
+                else:
+                    video_effect_value = "none"
             
             # Choose background assets based on type
             if background_type == "Background Video":

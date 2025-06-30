@@ -106,7 +106,9 @@ class TextDisplayShortEngine(ContentShortEngine):
                 })
 
             # Apply video effect if specified
+            print(f"DEBUG TextDisplay: self._db_video_effect = '{self._db_video_effect}' (type: {type(self._db_video_effect)})")
             if self._db_video_effect and self._db_video_effect != "none":
+                print(f"DEBUG TextDisplay: Adding video effect action with effect_type = '{self._db_video_effect}'")
                 if self._use_background_image:
                     # For background images, apply effect to the generated video
                     videoEditor.addEditingStep(EditingStep.APPLY_VIDEO_EFFECT, {
@@ -119,6 +121,8 @@ class TextDisplayShortEngine(ContentShortEngine):
                                                'url': self._db_background_trimmed,
                                                'effect_type': self._db_video_effect,
                                                'effect_params': self._db_video_effect_params})
+            else:
+                print(f"DEBUG TextDisplay: Skipping video effect (none or empty)")
 
             # Add watermark if specified
             if self._db_watermark:

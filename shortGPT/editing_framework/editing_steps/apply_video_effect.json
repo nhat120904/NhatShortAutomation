@@ -14,10 +14,7 @@
 		"actions": [
 			{
 				"type": "video_effect",
-				"param": {
-					"effect_type": null,
-					"effect_params": {}
-				}
+				"param": {}
 			}
 		]
 	}

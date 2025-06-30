@@ -30,7 +30,14 @@ class ContentShortEngine(AbstractContentEngine):
             self._db_background_video_name = background_video_name
             self._db_background_music_name = background_music_name
             if video_effect:
-                self._db_video_effect = video_effect
+                # Convert UI display names to internal effect values
+                from shortGPT.editing_utils.video_effects import get_video_effect_options
+                video_effect_options = get_video_effect_options()
+                if video_effect in video_effect_options:
+                    self._db_video_effect = video_effect_options[video_effect].value
+                else:
+                    # If it's already in the correct format, use it directly
+                    self._db_video_effect = video_effect if video_effect != "None" else "none"
             else:
                 self._db_video_effect = "none"
             if video_effect_params:
@@ -146,9 +153,12 @@ class ContentShortEngine(AbstractContentEngine):
             
             # Apply video effect if specified
             if self._db_video_effect and self._db_video_effect != "none":
+                print(f"DEBUG: Applying video effect: {self._db_video_effect}")
+                # Ensure effect_type is never Python None
+                effect_type = self._db_video_effect if self._db_video_effect is not None else "none"
                 videoEditor.addEditingStep(EditingStep.APPLY_VIDEO_EFFECT, {
                                            'url': self._db_background_trimmed,
-                                           'effect_type': self._db_video_effect,
+                                           'effect_type': effect_type,
                                            'effect_params': self._db_video_effect_params})
             
             # videoEditor.addEditingStep(EditingStep.ADD_SUBSCRIBE_ANIMATION, {'url': AssetDatabase.get_asset_link('subscribe animation')})

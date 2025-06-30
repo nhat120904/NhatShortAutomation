@@ -83,9 +83,11 @@ class RedditShortEngine(ContentShortEngine):
             
             # Apply video effect if specified
             if self._db_video_effect and self._db_video_effect != "none":
+                # Ensure effect_type is never Python None
+                effect_type = self._db_video_effect if self._db_video_effect is not None else "none"
                 videoEditor.addEditingStep(EditingStep.APPLY_VIDEO_EFFECT, {
                                            'url': self._db_background_trimmed,
-                                           'effect_type': self._db_video_effect,
+                                           'effect_type': effect_type,
                                            'effect_params': self._db_video_effect_params})
             
             videoEditor.addEditingStep(EditingStep.ADD_SUBSCRIBE_ANIMATION, {'url': AssetDatabase.get_asset_link('subscribe animation')})

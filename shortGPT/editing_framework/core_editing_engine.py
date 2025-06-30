@@ -133,6 +133,7 @@ class CoreEditingEngine:
                                    clip: Clip,
                                    actions: List[Dict[str, Any]]) -> Union[VideoFileClip, ImageClip, TextClip]:
         clip = self.process_common_actions(clip, actions)
+        print(f"Check actions: {actions}")
         for action in actions:
  
             if action['type'] == 'resize':
@@ -170,13 +171,31 @@ class CoreEditingEngine:
                 continue
 
             if action['type'] == 'video_effect':
+                print(f"Check action: {action}")
                 from shortGPT.editing_utils.video_effects import VideoEffect, apply_video_effect
-                effect_type = action['param'].get('effect_type', 'none')
-                effect_params = action['param'].get('effect_params', {})
+                
+                # Get the current asset from the calling function context
+                # We need to access the asset parameters to get effect_type and effect_params
+                current_asset = getattr(self, '_current_asset', None)
+                if current_asset and 'parameters' in current_asset:
+                    effect_type = current_asset['parameters'].get('effect_type', 'none')
+                    effect_params = current_asset['parameters'].get('effect_params', {})
+                else:
+                    # Fallback to action params if asset params not available
+                    effect_type = action['param'].get('effect_type', 'none')
+                    effect_params = action['param'].get('effect_params', {})
+                
+                # Handle case where effect_type is Python None, string "None", or empty
+                if effect_type is None or effect_type == "None" or effect_type == "":
+                    effect_type = "none"
+                    print(f"Video effect was None/empty, defaulting to 'none'")
+                
+                print(f"Video effect type: '{effect_type}', params: {effect_params}")
                 
                 try:
                     effect_enum = VideoEffect(effect_type)
                     clip = apply_video_effect(clip, effect_enum, **effect_params)
+                    print(f"Successfully applied video effect: {effect_type}")
                 except ValueError:
                     print(f"Warning: Unknown video effect '{effect_type}', skipping...")
                 continue
@@ -194,7 +213,8 @@ class CoreEditingEngine:
 
             if action['type'] == 'loop_background_music':
                 target_duration = action['param']
-                start = clip.duration * 0.15
+                start = 0
+                # start = clip.duration * 0.15
                 clip = clip.subclipped(start)
                 clip = clip.with_effects([afx.AudioLoop(duration=target_duration)])
                 continue
@@ -206,6 +226,9 @@ class CoreEditingEngine:
         return clip
     # Process individual asset types
     def process_video_asset(self, asset: Dict[str, Any]) -> VideoFileClip:
+        # Store current asset for access in action processing
+        self._current_asset = asset
+        
         params = {
             'filename': handle_path(asset['parameters']['url'])
         }
@@ -259,9 +282,17 @@ class CoreEditingEngine:
             # Update params to use the local file
             params['filename'] = local_path
         clip = VideoFileClip(**params)
-        return self.process_common_visual_actions(clip, asset['actions'])
+        result = self.process_common_visual_actions(clip, asset['actions'])
+        
+        # Clear current asset after processing
+        self._current_asset = None
+        
+        return result
 
     def process_image_asset(self, asset: Dict[str, Any]) -> ImageClip:
+        # Store current asset for access in action processing
+        self._current_asset = asset
+        
         url = asset['parameters']['url']
         if url.startswith(('http://', 'https://')):
             import urllib.request
@@ -304,7 +335,12 @@ class CoreEditingEngine:
             url = local_path
         
         clip = ImageClip(url)
-        return self.process_common_visual_actions(clip, asset['actions'])
+        result = self.process_common_visual_actions(clip, asset['actions'])
+        
+        # Clear current asset after processing
+        self._current_asset = None
+        
+        return result
 
     def process_text_asset(self, asset: Dict[str, Any]) -> TextClip:
         text_clip_params = asset['parameters']
