@@ -52,3 +52,5 @@ transformers
 
 # Formatter
 black
+isort
+autopep8

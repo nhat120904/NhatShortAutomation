@@ -14,7 +14,6 @@ class AssetComponentsUtils:
     EDGE_TTS = "Free EdgeTTS (lower quality)"
     ELEVEN_TTS = "ElevenLabs(Very High Quality)"
 
-
     instance_background_video_checkbox = None
     instance_background_music_checkbox = None
     instance_background_image_checkbox = None
@@ -62,7 +61,7 @@ class AssetComponentsUtils:
                 choices=choices,
                 interactive=True,
                 label="Choose background video",
-                value=random.choice(choices) if choices else []
+                value=random.choice(choices) if choices else [],
             )
         return cls.instance_background_video_checkbox
 
@@ -74,7 +73,7 @@ class AssetComponentsUtils:
                 choices=choices,
                 interactive=True,
                 label="Choose background music",
-                value=random.choice(choices) if choices else []
+                value=random.choice(choices) if choices else [],
             )
         return cls.instance_background_music_checkbox
 
@@ -86,7 +85,7 @@ class AssetComponentsUtils:
                 choices=choices,
                 interactive=True,
                 label="Choose background image",
-                value=random.choice(choices) if choices else []
+                value=random.choice(choices) if choices else [],
             )
         return cls.instance_background_image_checkbox
 

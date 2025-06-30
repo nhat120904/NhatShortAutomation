@@ -1,8 +1,13 @@
 import enum
 import os
-from shortGPT.database.db_document import TinyMongoDocument
+
 from dotenv import load_dotenv
-load_dotenv('./.env')
+
+from shortGPT.database.db_document import TinyMongoDocument
+
+load_dotenv("./.env")
+
+
 class ApiProvider(enum.Enum):
     OPENAI = "OPENAI_API_KEY"
     GEMINI = "GEMINI_API_KEY"
@@ -11,13 +16,15 @@ class ApiProvider(enum.Enum):
 
 
 class ApiKeyManager:
-    api_key_doc_manager = TinyMongoDocument("api_db", "api_keys", "key_doc", create=True)
+    api_key_doc_manager = TinyMongoDocument(
+        "api_db", "api_keys", "key_doc", create=True
+    )
 
     @classmethod
     def get_api_key(cls, key: str | ApiProvider):
         if isinstance(key, ApiProvider):
             key = key.value
-            
+
         # Check if the key is present in the database
         api_key = cls.api_key_doc_manager._get(key)
         if api_key:
@@ -28,7 +35,7 @@ class ApiKeyManager:
         api_key = os.environ.get(env_key)
         if api_key:
             return api_key
-        
+
         return ""
 
     @classmethod

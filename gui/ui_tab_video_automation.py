@@ -10,10 +10,12 @@ from gui.ui_components_html import GradioComponentsHTML
 from shortGPT.audio.edge_voice_module import EdgeTTSVoiceModule
 from shortGPT.audio.eleven_voice_module import ElevenLabsVoiceModule
 from shortGPT.config.api_db import ApiKeyManager
-from shortGPT.config.languages import (EDGE_TTS_VOICENAME_MAPPING,
-                                        ELEVEN_SUPPORTED_LANGUAGES,
-                                        LANGUAGE_ACRONYM_MAPPING,
-                                        Language)
+from shortGPT.config.languages import (
+    EDGE_TTS_VOICENAME_MAPPING,
+    ELEVEN_SUPPORTED_LANGUAGES,
+    LANGUAGE_ACRONYM_MAPPING,
+    Language,
+)
 from shortGPT.engine.content_video_engine import ContentVideoEngine
 from shortGPT.gpt import gpt_chat_video
 
@@ -69,10 +71,10 @@ class VideoAutomationUI(AbstractComponentUI):
     def make_video(self, script, voice_module, isVertical, progress, background_music):
         try:
             videoEngine = ContentVideoEngine(
-                voiceModule=voice_module, 
-                script=script, 
-                isVerticalFormat=isVertical, 
-                auto_music=self.auto_music if hasattr(self, 'auto_music') else False,
+                voiceModule=voice_module,
+                script=script,
+                isVerticalFormat=isVertical,
+                auto_music=self.auto_music if hasattr(self, "auto_music") else False,
                 background_music_name=background_music if background_music else None,
             )
             num_steps = videoEngine.get_total_steps()
@@ -80,22 +82,34 @@ class VideoAutomationUI(AbstractComponentUI):
 
             def logger(prog_str):
                 nonlocal progress_counter
-                progress(progress_counter / (num_steps), f"Creating video - {progress_counter} - {prog_str}")
+                progress(
+                    progress_counter / (num_steps),
+                    f"Creating video - {progress_counter} - {prog_str}",
+                )
+
             videoEngine.set_logger(logger)
             for step_num, step_info in videoEngine.makeContent():
-                progress(progress_counter / (num_steps), f"Creating video - {step_info}")
+                progress(
+                    progress_counter / (num_steps), f"Creating video - {step_info}"
+                )
                 progress_counter += 1
 
             video_path = videoEngine.get_video_output_path()
             return video_path
         except Exception as e:
             import traceback
+
             print(f"Error in make_video: {e}")
             print(traceback.format_exc())
             raise e
 
     def reset_components(self):
-        return gr.update(value=self.initialize_conversation()), gr.update(visible=True), gr.update(value="", visible=False), gr.update(value="", visible=False)
+        return (
+            gr.update(value=self.initialize_conversation()),
+            gr.update(visible=True),
+            gr.update(value="", visible=False),
+            gr.update(value="", visible=False),
+        )
 
     def chatbot_conversation(self):
         def respond(message, chat_history, progress=gr.Progress()):
@@ -108,7 +122,9 @@ class VideoAutomationUI(AbstractComponentUI):
                 if errorMessage:
                     bot_message = errorMessage
                 else:
-                    self.isVertical = "vertical" in message.lower() or "short" in message.lower()
+                    self.isVertical = (
+                        "vertical" in message.lower() or "short" in message.lower()
+                    )
                     self.state = Chatstate.ASK_VOICE_MODULE
                     bot_message = "Which voice module do you want to use? Please type 'ElevenLabs' for high quality, 'EdgeTTS' for free medium quality voice."
             elif self.state == Chatstate.ASK_VOICE_MODULE:
@@ -118,22 +134,39 @@ class VideoAutomationUI(AbstractComponentUI):
                         bot_message = "Your ELEVENLABS_API_KEY API key is missing. Please go to the config tab and enter the API key."
                         return
                     self.voice_module = ElevenLabsVoiceModule
-                    language_choices = [lang.value for lang in ELEVEN_SUPPORTED_LANGUAGES]
+                    language_choices = [
+                        lang.value for lang in ELEVEN_SUPPORTED_LANGUAGES
+                    ]
                 elif "edgetts" in message.lower():
                     self.voice_module = EdgeTTSVoiceModule
                     language_choices = [lang.value for lang in Language]
                 else:
-                    bot_message = "Invalid voice module. Please type 'ElevenLabs' or 'EdgeTTS'."
+                    bot_message = (
+                        "Invalid voice module. Please type 'ElevenLabs' or 'EdgeTTS'."
+                    )
                     return
                 self.state = Chatstate.ASK_LANGUAGE
                 bot_message = f"🌐What language will be used in the video?🌐 Choose from one of these ({', '.join(language_choices)})"
             elif self.state == Chatstate.ASK_LANGUAGE:
-                self.language = next((lang for lang in Language if lang.value.lower() in message.lower()), None)
+                self.language = next(
+                    (
+                        lang
+                        for lang in Language
+                        if lang.value.lower() in message.lower()
+                    ),
+                    None,
+                )
                 self.language = self.language if self.language else Language.ENGLISH
                 if self.voice_module == ElevenLabsVoiceModule:
-                    self.voice_module = ElevenLabsVoiceModule(ApiKeyManager.get_api_key('ELEVENLABS_API_KEY'), "Roger", checkElevenCredits=True)
+                    self.voice_module = ElevenLabsVoiceModule(
+                        ApiKeyManager.get_api_key("ELEVENLABS_API_KEY"),
+                        "Roger",
+                        checkElevenCredits=True,
+                    )
                 elif self.voice_module == EdgeTTSVoiceModule:
-                    self.voice_module = EdgeTTSVoiceModule(EDGE_TTS_VOICENAME_MAPPING[self.language]['male'])
+                    self.voice_module = EdgeTTSVoiceModule(
+                        EDGE_TTS_VOICENAME_MAPPING[self.language]["male"]
+                    )
                 self.state = Chatstate.ASK_DESCRIPTION
                 bot_message = "Amazing 🔥 ! 📝Can you describe thoroughly the subject of your video?📝 I will next generate you a script based on that description"
             elif self.state == Chatstate.ASK_DESCRIPTION:
@@ -158,16 +191,34 @@ class VideoAutomationUI(AbstractComponentUI):
                     self.auto_music = False
                     self.background_music = message
                     bot_message = f"I'll use '{message}' as background music if available, otherwise no music will be added."
-                
+
                 self.state = Chatstate.MAKE_VIDEO
                 inputVisible = False
-                yield gr.update(visible=False), gr.update(value=[[None, "Your video is being made now! 🎬"]]), gr.update(value="", visible=False), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=False)
+                yield gr.update(visible=False), gr.update(
+                    value=[[None, "Your video is being made now! 🎬"]]
+                ), gr.update(value="", visible=False), gr.update(
+                    value=error_html, visible=errorVisible
+                ), gr.update(
+                    visible=folderVisible
+                ), gr.update(
+                    visible=False
+                )
                 try:
-                    video_path = self.make_video(self.script, self.voice_module, self.isVertical, progress=progress, background_music=self.background_music)
+                    video_path = self.make_video(
+                        self.script,
+                        self.voice_module,
+                        self.isVertical,
+                        progress=progress,
+                        background_music=self.background_music,
+                    )
                     file_name = video_path.split("/")[-1].split("\\")[-1]
-                    current_url = self.shortGptUI.share_url+"/" if self.shortGptUI.share else self.shortGptUI.local_url
+                    current_url = (
+                        self.shortGptUI.share_url + "/"
+                        if self.shortGptUI.share
+                        else self.shortGptUI.local_url
+                    )
                     file_url_path = f"{current_url}gradio_api/file={video_path}"
-                    self.video_html = f'''
+                    self.video_html = f"""
                         <div style="display: flex; flex-direction: column; align-items: center;">
                             <video width="{600}" height="{300}" style="max-height: 100%;" controls>
                                 <source src="{file_url_path}" type="video/mp4">
@@ -176,26 +227,46 @@ class VideoAutomationUI(AbstractComponentUI):
                             <a href="{file_url_path}" download="{file_name}" style="margin-top: 10px;">
                                 <button style="font-size: 1em; padding: 10px; border: none; cursor: pointer; color: white; background: #007bff;">Download Video</button>
                             </a>
-                        </div>'''
+                        </div>"""
                     self.videoVisible = True
                     folderVisible = True
                     bot_message = "Your video is completed !🎬. Scroll down below to open its file location."
                 except Exception as e:
-                    traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+                    traceback_str = "".join(traceback.format_tb(e.__traceback__))
                     error_name = type(e).__name__.capitalize() + " : " + f"{e.args[0]}"
                     errorVisible = True
-                    gradio_content_automation_ui_error_template = GradioComponentsHTML.get_html_error_template()
-                    error_html = gradio_content_automation_ui_error_template.format(error_message=error_name, stack_trace=traceback_str)
+                    gradio_content_automation_ui_error_template = (
+                        GradioComponentsHTML.get_html_error_template()
+                    )
+                    error_html = gradio_content_automation_ui_error_template.format(
+                        error_message=error_name, stack_trace=traceback_str
+                    )
                     bot_message = "We encountered an error while making this video ❌"
                     print("Error", traceback_str)
-                    yield gr.update(visible=False), gr.update(value=[[None, "Your video is being made now! 🎬"]]), gr.update(value="", visible=False), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=True)
+                    yield gr.update(visible=False), gr.update(
+                        value=[[None, "Your video is being made now! 🎬"]]
+                    ), gr.update(value="", visible=False), gr.update(
+                        value=error_html, visible=errorVisible
+                    ), gr.update(
+                        visible=folderVisible
+                    ), gr.update(
+                        visible=True
+                    )
 
             elif self.state == Chatstate.ASK_CORRECTION:
                 self.script = self.correct_script(self.script, message)
                 self.state = Chatstate.ASK_SATISFACTION
                 bot_message = f"📝 Here is your corrected script: \n\n--------------\n{self.script}\n\n・Are you satisfied with the script and ready to proceed with creating the video? Please respond with 'YES' or 'NO'. 👍👎"
             chat_history.append((message, bot_message))
-            yield gr.update(value="", visible=inputVisible), gr.update(value=chat_history), gr.update(value=self.video_html, visible=self.videoVisible), gr.update(value=error_html, visible=errorVisible), gr.update(visible=folderVisible), gr.update(visible=True)
+            yield gr.update(value="", visible=inputVisible), gr.update(
+                value=chat_history
+            ), gr.update(value=self.video_html, visible=self.videoVisible), gr.update(
+                value=error_html, visible=errorVisible
+            ), gr.update(
+                visible=folderVisible
+            ), gr.update(
+                visible=True
+            )
 
         return respond
 
@@ -207,7 +278,12 @@ class VideoAutomationUI(AbstractComponentUI):
         self.video_html = ""
         self.videoVisible = False
         self.auto_music = False  # Initialize auto_music attribute
-        return [[None, "🤖 Welcome to ShortGPT! 🚀 I'm a python framework aiming to simplify and automate your video editing tasks.\nLet's get started! 🎥🎬\n\n Do you want your video to be in landscape or vertical format? (landscape OR vertical)"]]
+        return [
+            [
+                None,
+                "🤖 Welcome to ShortGPT! 🚀 I'm a python framework aiming to simplify and automate your video editing tasks.\nLet's get started! 🎥🎬\n\n Do you want your video to be in landscape or vertical format? (landscape OR vertical)",
+            ]
+        ]
 
     def reset_conversation(self):
         self.state = Chatstate.ASK_ORIENTATION
@@ -225,12 +301,31 @@ class VideoAutomationUI(AbstractComponentUI):
                 self.msg = gr.Textbox()
                 self.restart_button = gr.Button("Restart")
                 self.video_folder = gr.Button("📁", visible=False)
-                self.video_folder.click(lambda _: AssetComponentsUtils.start_file(os.path.abspath("videos/")))
+                self.video_folder.click(
+                    lambda _: AssetComponentsUtils.start_file(
+                        os.path.abspath("videos/")
+                    )
+                )
                 respond = self.chatbot_conversation()
 
             self.errorHTML = gr.HTML(visible=False)
             self.outHTML = gr.HTML('<div style="min-height: 80px;"></div>')
-            self.restart_button.click(self.reset_components, [], [self.chatbot, self.msg, self.errorHTML, self.outHTML])
+            self.restart_button.click(
+                self.reset_components,
+                [],
+                [self.chatbot, self.msg, self.errorHTML, self.outHTML],
+            )
             self.restart_button.click(self.reset_conversation, [])
-            self.msg.submit(respond, [self.msg, self.chatbot], [self.msg, self.chatbot, self.outHTML, self.errorHTML, self.video_folder, self.restart_button])
+            self.msg.submit(
+                respond,
+                [self.msg, self.chatbot],
+                [
+                    self.msg,
+                    self.chatbot,
+                    self.outHTML,
+                    self.errorHTML,
+                    self.video_folder,
+                    self.restart_button,
+                ],
+            )
         return self.video_automation

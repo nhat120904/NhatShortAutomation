@@ -8,27 +8,28 @@ import os
 import sys
 
 # Add the project root to Python path
-sys.path.insert(0, '/Users/nhatcuong/code_project/ShortGPT')
+sys.path.insert(0, "/Users/nhatcuong/code_project/ShortGPT")
+
 
 def demo_usage():
     """Demonstrate how to use the CustomAudioShortEngine"""
-    
+
     print("=" * 60)
     print("CUSTOM AUDIO SHORT ENGINE - USAGE DEMO")
     print("=" * 60)
-    
+
     print("\n1. 📂 PREPARING AUDIO FILE")
     print("   - Supported formats: MP3, WAV, M4A, AAC, FLAC, OGG")
     print("   - Recommended: Clear speech, good quality")
     print("   - Duration: Ideally under 60 seconds for shorts")
-    
+
     # Check for sample audio
     sample_audio = "/Users/nhatcuong/code_project/ShortGPT/public/tinhve.wav"
     if os.path.exists(sample_audio):
         print(f"   ✅ Sample audio found: {sample_audio}")
     else:
         print("   ⚠️  No sample audio found, you'll need to provide your own")
-    
+
     print("\n2. 🖥️  USING THE UI")
     print("   a. Start ShortGPT: python runShortGPT.py")
     print("   b. Go to 'Short Automation' tab")
@@ -36,10 +37,12 @@ def demo_usage():
     print("   d. Upload your audio file")
     print("   e. Configure background video and music")
     print("   f. Click 'Create Shorts'")
-    
+
     print("\n3. 🔧 PROGRAMMATIC USAGE")
     print("   ```python")
-    print("   from shortGPT.engine.custom_audio_short_engine import CustomAudioShortEngine")
+    print(
+        "   from shortGPT.engine.custom_audio_short_engine import CustomAudioShortEngine"
+    )
     print("   from shortGPT.config.languages import Language")
     print("   ")
     print("   engine = CustomAudioShortEngine(")
@@ -58,7 +61,7 @@ def demo_usage():
     print("   ")
     print("   video_path = engine.get_video_output_path()")
     print("   ```")
-    
+
     print("\n4. 🎯 KEY ADVANTAGES")
     advantages = [
         "No TTS API keys required",
@@ -66,12 +69,12 @@ def demo_usage():
         "Faster processing (skip script + TTS generation)",
         "Support for multiple audio formats",
         "Same video automation features",
-        "Automatic audio format conversion"
+        "Automatic audio format conversion",
     ]
-    
+
     for i, advantage in enumerate(advantages, 1):
         print(f"   {i}. {advantage}")
-    
+
     print("\n5. 📋 WORKFLOW COMPARISON")
     print("\n   BEFORE (Custom Text Shorts):")
     print("   Text → TTS API → Audio → Video + Captions → Final Video")
@@ -79,17 +82,18 @@ def demo_usage():
     print("\n   AFTER (Custom Audio Shorts):")
     print("   Audio File → Video + Captions → Final Video")
     print("   Steps: 10 (skips script generation and TTS)")
-    
+
     print("\n6. 🚀 GETTING STARTED")
     print("   1. Prepare your audio file (clear speech, good quality)")
     print("   2. Run: python runShortGPT.py")
     print("   3. Select 'Custom Audio shorts'")
     print("   4. Upload your audio and configure settings")
     print("   5. Create your short!")
-    
+
     print("\n" + "=" * 60)
     print("Ready to create shorts with your own audio! 🎉")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     demo_usage()

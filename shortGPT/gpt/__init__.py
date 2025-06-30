@@ -1,2 +1,1 @@
-from . import gpt_utils
-from . import reddit_gpt
+from . import gpt_utils, reddit_gpt

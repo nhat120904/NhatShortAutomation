@@ -1,9 +1,12 @@
 import json
 import os
 import re
-from time import sleep, time
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from time import sleep, time
+
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 import openai
 import tiktoken
 import yaml
@@ -26,8 +29,10 @@ def num_tokens_from_messages(texts, model="gpt-4o-mini"):
             score += 4 + len(encoding.encode(text))
         return score
     else:
-        raise NotImplementedError(f"""num_tokens_from_messages() is not presently implemented for model {model}.
-        See https://github.com/openai/openai-python/blob/main/chatml.md for information""")
+        raise NotImplementedError(
+            f"""num_tokens_from_messages() is not presently implemented for model {model}.
+        See https://github.com/openai/openai-python/blob/main/chatml.md for information"""
+        )
 
 
 def extract_biggest_json(string):
@@ -39,7 +44,7 @@ def extract_biggest_json(string):
 
 
 def get_first_number(string):
-    pattern = r'\b(0|[1-9]|10)\b'
+    pattern = r"\b(0|[1-9]|10)\b"
     match = re.search(pattern, string)
     if match:
         return int(match.group())
@@ -53,44 +58,53 @@ def load_yaml_file(file_path: str) -> dict:
 
 
 def load_json_file(file_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         json_data = json.load(f)
     return json_data
 
+
 from pathlib import Path
+
 
 def load_local_yaml_prompt(file_path):
     _here = Path(__file__).parent
-    _absolute_path = (_here / '..' / file_path).resolve()
+    _absolute_path = (_here / ".." / file_path).resolve()
     json_template = load_yaml_file(str(_absolute_path))
-    return json_template['chat_prompt'], json_template['system_prompt']
+    return json_template["chat_prompt"], json_template["system_prompt"]
 
 
 def open_file(filepath):
-    with open(filepath, 'r', encoding='utf-8') as infile:
+    with open(filepath, "r", encoding="utf-8") as infile:
         return infile.read()
+
+
 from openai import OpenAI
 
+
 @traceable
-def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_nl=True, conversation=None):
+def llm_completion(
+    chat_prompt="",
+    system="",
+    temp=0.7,
+    max_tokens=2000,
+    remove_nl=True,
+    conversation=None,
+):
     openrouter_key = ApiKeyManager.get_api_key("OPENROUTER_API_KEY")
-    openai_key= ApiKeyManager.get_api_key("OPENAI_API_KEY")
+    openai_key = ApiKeyManager.get_api_key("OPENAI_API_KEY")
     gemini_key = ApiKeyManager.get_api_key("GEMINI_API_KEY")
-    if openrouter_key:  
-        client = OpenAI( 
-            api_key=openrouter_key, 
-            base_url="https://openrouter.ai/api/v1"
-        )
-        model="qwen/qwen-2.5-72b-instruct:free"
+    if openrouter_key:
+        client = OpenAI(api_key=openrouter_key, base_url="https://openrouter.ai/api/v1")
+        model = "qwen/qwen-2.5-72b-instruct:free"
     elif openai_key:
         client = OpenAI(api_key=openai_key)
-        model="gpt-4o-mini"
+        model = "gpt-4o-mini"
     elif gemini_key:
-        client = OpenAI( 
+        client = OpenAI(
             api_key=gemini_key,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
-        model="gemini-2.0-flash-lite-preview-02-05"
+        model = "gemini-2.0-flash-lite-preview-02-05"
     else:
         raise Exception("No OpenAI or Gemini API Key found for LLM request")
     max_retry = 5
@@ -103,27 +117,33 @@ def llm_completion(chat_prompt="", system="", temp=0.7, max_tokens=2000, remove_
             else:
                 messages = [
                     {"role": "system", "content": system},
-                    {"role": "user", "content": chat_prompt}
+                    {"role": "user", "content": chat_prompt},
                 ]
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temp,
-                timeout=30
-                )
+                timeout=30,
+            )
             text = response.choices[0].message.content.strip()
             if remove_nl:
-                text = re.sub('\s+', ' ', text)
-            filename = '%s_llm_completion.txt' % time()
-            if not os.path.exists('.logs/gpt_logs'):
-                os.makedirs('.logs/gpt_logs')
-            with open('.logs/gpt_logs/%s' % filename, 'w', encoding='utf-8') as outfile:
-                outfile.write(f"System prompt: ===\n{system}\n===\n"+f"Chat prompt: ===\n{chat_prompt}\n===\n" + f'RESPONSE:\n====\n{text}\n===\n')
+                text = re.sub("\s+", " ", text)
+            filename = "%s_llm_completion.txt" % time()
+            if not os.path.exists(".logs/gpt_logs"):
+                os.makedirs(".logs/gpt_logs")
+            with open(".logs/gpt_logs/%s" % filename, "w", encoding="utf-8") as outfile:
+                outfile.write(
+                    f"System prompt: ===\n{system}\n===\n"
+                    + f"Chat prompt: ===\n{chat_prompt}\n===\n"
+                    + f"RESPONSE:\n====\n{text}\n===\n"
+                )
             return text
         except Exception as oops:
             retry += 1
-            print('Error communicating with OpenAI:', oops)
+            print("Error communicating with OpenAI:", oops)
             error = str(oops)
             sleep(1)
-    raise Exception(f"Error communicating with LLM Endpoint Completion errored more than error: {error}")
+    raise Exception(
+        f"Error communicating with LLM Endpoint Completion errored more than error: {error}"
+    )

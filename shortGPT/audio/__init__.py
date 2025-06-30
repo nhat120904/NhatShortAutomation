@@ -1,3 +1,1 @@
-from . import audio_utils
-from . import eleven_voice_module
-from . import audio_duration
+from . import audio_duration, audio_utils, eleven_voice_module

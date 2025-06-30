@@ -1,11 +1,15 @@
-from shortGPT.gpt import gpt_utils
 import json
 
+from shortGPT.gpt import gpt_utils
+
+
 def generate_title_description_dict(content):
-    out = {"title": "", "description":""}
-    chat, system = gpt_utils.load_local_yaml_prompt('prompt_templates/yt_title_description.yaml')
+    out = {"title": "", "description": ""}
+    chat, system = gpt_utils.load_local_yaml_prompt(
+        "prompt_templates/yt_title_description.yaml"
+    )
     chat = chat.replace("<<CONTENT>>", f"{content}")
-    
+
     while out["title"] == "" or out["description"] == "":
         result = gpt_utils.llm_completion(chat_prompt=chat, system=system, temp=1)
         try:
@@ -16,5 +20,5 @@ def generate_title_description_dict(content):
                 out["description"] = response["description"]
         except Exception as e:
             pass
-        
-    return out['title'], out['description']
+
+    return out["title"], out["description"]

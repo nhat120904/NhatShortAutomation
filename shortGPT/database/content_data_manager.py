@@ -1,17 +1,19 @@
 from shortGPT.database.db_document import AbstractDatabaseDocument
 
 
-class ContentDataManager():
+class ContentDataManager:
 
     def __init__(self, db_doc: AbstractDatabaseDocument, content_type: str, new=False):
         self.contentType = content_type
         self.db_doc = db_doc
         if new:
-            self.db_doc._save({
-                'content_type': content_type,
-                'ready_to_upload': False,
-                'last_completed_step': 0,
-            })
+            self.db_doc._save(
+                {
+                    "content_type": content_type,
+                    "ready_to_upload": False,
+                    "last_completed_step": 0,
+                }
+            )
 
     def save(self, key, value):
         self.db_doc._save({key: value})

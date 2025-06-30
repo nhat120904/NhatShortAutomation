@@ -5,8 +5,11 @@ from concurrent.futures import ThreadPoolExecutor
 import edge_tts
 
 from shortGPT.audio.voice_module import VoiceModule
-from shortGPT.config.languages import (EDGE_TTS_VOICENAME_MAPPING,
-                                       LANGUAGE_ACRONYM_MAPPING, Language)
+from shortGPT.config.languages import (
+    EDGE_TTS_VOICENAME_MAPPING,
+    LANGUAGE_ACRONYM_MAPPING,
+    Language,
+)
 
 
 def run_async_func(loop, func):
@@ -30,13 +33,22 @@ class EdgeTTSVoiceModule(VoiceModule):
 
         try:
             with ThreadPoolExecutor() as executor:
-                loop.run_in_executor(executor, run_async_func, loop, self.async_generate_voice(text, outputfile))
+                loop.run_in_executor(
+                    executor,
+                    run_async_func,
+                    loop,
+                    self.async_generate_voice(text, outputfile),
+                )
 
         finally:
             loop.close()
         if not os.path.exists(outputfile):
-            print("An error happened during edge_tts audio generation, no output audio generated")
-            raise Exception("An error happened during edge_tts audio generation, no output audio generated")
+            print(
+                "An error happened during edge_tts audio generation, no output audio generated"
+            )
+            raise Exception(
+                "An error happened during edge_tts audio generation, no output audio generated"
+            )
         return outputfile
 
     async def async_generate_voice(self, text, outputfile):
@@ -48,5 +60,8 @@ class EdgeTTSVoiceModule(VoiceModule):
                         file.write(chunk["data"])
         except Exception as e:
             print("Error generating audio using edge_tts", e)
-            raise Exception("An error happened during edge_tts audio generation, no output audio generated", e)
+            raise Exception(
+                "An error happened during edge_tts audio generation, no output audio generated",
+                e,
+            )
         return outputfile

@@ -3,27 +3,39 @@ import platform
 
 
 class Requirements:
-    '''Manage requirements for the project'''
+    """Manage requirements for the project"""
 
     def __init__(self):
         self.package_path = os.path.dirname(os.path.realpath(__file__))
-        self.requirements_path = os.path.join(self.package_path, '..', '..', 'requirements.txt')
+        self.requirements_path = os.path.join(
+            self.package_path, "..", "..", "requirements.txt"
+        )
 
     def get_list_requirements(self):
-        '''Get the list of requirements packages from requirements.txt'''
+        """Get the list of requirements packages from requirements.txt"""
         with open(self.requirements_path) as f:
             requirements = f.read().splitlines()
 
         # remove comments and empty lines
-        requirements = [line for line in requirements if not line.startswith('#')]
+        requirements = [line for line in requirements if not line.startswith("#")]
         requirements = [line for line in requirements if line.strip()]
 
         # extract package name from protocol
-        requirements = [line.split('/')[-1] for line in requirements if not line.startswith('git+')]
-        requirements = [line.split('/')[-1] for line in requirements if not line.startswith('http')]
-        requirements = [line.split('/')[-1] for line in requirements if not line.startswith('https')]
-        requirements = [line.split('/')[-1] for line in requirements if not line.startswith('ssh')]
-        requirements = [line.split('/')[-1] for line in requirements if not line.startswith('git')]
+        requirements = [
+            line.split("/")[-1] for line in requirements if not line.startswith("git+")
+        ]
+        requirements = [
+            line.split("/")[-1] for line in requirements if not line.startswith("http")
+        ]
+        requirements = [
+            line.split("/")[-1] for line in requirements if not line.startswith("https")
+        ]
+        requirements = [
+            line.split("/")[-1] for line in requirements if not line.startswith("ssh")
+        ]
+        requirements = [
+            line.split("/")[-1] for line in requirements if not line.startswith("git")
+        ]
 
         # sort alphabetically
         requirements.sort()
@@ -31,19 +43,19 @@ class Requirements:
         return requirements
 
     def get_os_name(self):
-        '''Get the name of the operating system'''
+        """Get the name of the operating system"""
         return platform.system()
 
     def get_os_version(self):
-        '''Get the version of the operating system'''
+        """Get the version of the operating system"""
         return platform.version()
 
     def get_python_version(self):
-        '''Get the version of Python installed'''
+        """Get the version of Python installed"""
         return platform.python_version()
 
     def is_all_requirements_installed(self):
-        '''Check if all requirements are installed'''
+        """Check if all requirements are installed"""
         requirements = self.get_list_requirements()
         for requirement in requirements:
             if not self.is_requirement_installed(requirement):
@@ -51,8 +63,9 @@ class Requirements:
         return True
 
     def is_requirement_installed(self, package_name):
-        '''Check if a package is installed'''
+        """Check if a package is installed"""
         import importlib
+
         try:
             importlib.import_module(package_name)
             return True
@@ -60,15 +73,16 @@ class Requirements:
             return False
 
     def get_version(self, package_name):
-        '''Get the version of a package'''
+        """Get the version of a package"""
         import pkg_resources
+
         try:
             return pkg_resources.get_distribution(package_name).version
         except:
             return None
 
     def get_all_requirements_versions(self):
-        '''Get the versions of all requirements'''
+        """Get the versions of all requirements"""
         requirements = self.get_list_requirements()
         versions = {}
         for requirement in requirements:
@@ -76,7 +90,7 @@ class Requirements:
         return versions
 
     def get_all_requirements_not_installed(self):
-        '''Get the list of all requirements not installed'''
+        """Get the list of all requirements not installed"""
         requirements = self.get_list_requirements()
         not_installed = {}
         for requirement in requirements:
@@ -86,8 +100,8 @@ class Requirements:
         return not_installed
 
 
-if __name__ == '__main__':
-    '''Display information about the system and requirements'''
+if __name__ == "__main__":
+    """Display information about the system and requirements"""
     requirements_manager = Requirements()
     # Skipping for now, because it assumes package have the same name as the python import itself, which is not true most sometimes.
     # if not requirements_manager.is_all_requirements_installed():

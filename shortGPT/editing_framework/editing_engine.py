@@ -1,9 +1,10 @@
-import json
-from typing import Any, Dict, List, Union
-from enum import Enum
 import collections.abc
+import json
+from enum import Enum
+from typing import Any, Dict, List, Union
 
 from shortGPT.editing_framework.core_editing_engine import CoreEditingEngine
+
 
 def update_dict(d, u):
     for k, v in u.items():
@@ -33,77 +34,111 @@ class EditingStep(Enum):
     ADD_BACKGROUND_VOICEOVER = "add_background_voiceover.json"
     APPLY_VIDEO_EFFECT = "apply_video_effect.json"
 
+
 class Flow(Enum):
     WHITE_REDDIT_IMAGE_FLOW = "build_reddit_image.json"
+
 
 from pathlib import Path
 
 _here = Path(__file__).parent
-STEPS_PATH = (_here / 'editing_steps/').resolve()
-FLOWS_PATH = (_here / 'flows/').resolve()
+STEPS_PATH = (_here / "editing_steps/").resolve()
+FLOWS_PATH = (_here / "flows/").resolve()
+
 
 class EditingEngine:
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         self.editing_step_tracker = dict((step, 0) for step in EditingStep)
-        self.schema = {'visual_assets': {}, 'audio_assets': {}}
+        self.schema = {"visual_assets": {}, "audio_assets": {}}
 
     def addEditingStep(self, editingStep: EditingStep, args: Dict[str, any] = {}):
         json_step = json.loads(
-            open(STEPS_PATH / f"{editingStep.value}", 'r', encoding='utf-8').read())
+            open(STEPS_PATH / f"{editingStep.value}", "r", encoding="utf-8").read()
+        )
         step_name, editingStepDict = list(json_step.items())[0]
-        if 'inputs' in editingStepDict:
-            required_args = (editingStepDict['inputs']['actions'] if 'actions' in editingStepDict['inputs'] else []) + (editingStepDict['inputs']['parameters'] if 'parameters' in editingStepDict['inputs'] else [])
+        if "inputs" in editingStepDict:
+            required_args = (
+                editingStepDict["inputs"]["actions"]
+                if "actions" in editingStepDict["inputs"]
+                else []
+            ) + (
+                editingStepDict["inputs"]["parameters"]
+                if "parameters" in editingStepDict["inputs"]
+                else []
+            )
             for required_argument in required_args:
                 if required_argument not in args:
                     raise Exception(
-                        f"Error. '{required_argument}' input missing, you must include it to use this editing step")
+                        f"Error. '{required_argument}' input missing, you must include it to use this editing step"
+                    )
             if required_args:
                 pass
-            action_names = [action['type'] for action in editingStepDict['actions']
-                            ] if 'actions' in editingStepDict else []
-            param_names = [param_name for param_name in editingStepDict['parameters']
-                           ] if 'parameters' in editingStepDict else []
+            action_names = (
+                [action["type"] for action in editingStepDict["actions"]]
+                if "actions" in editingStepDict
+                else []
+            )
+            param_names = (
+                [param_name for param_name in editingStepDict["parameters"]]
+                if "parameters" in editingStepDict
+                else []
+            )
             for arg_name in args:
-                if ('inputs' in editingStepDict):
-                    if 'parameters' in editingStepDict['inputs'] and arg_name in param_names:
-                        editingStepDict['parameters'][arg_name] = args[arg_name]
+                if "inputs" in editingStepDict:
+                    if (
+                        "parameters" in editingStepDict["inputs"]
+                        and arg_name in param_names
+                    ):
+                        editingStepDict["parameters"][arg_name] = args[arg_name]
                         pass
-                    if 'actions' in editingStepDict['inputs'] and arg_name in action_names:
-                        for i, action in enumerate(editingStepDict['actions']):
-                            if action['type'] == arg_name:
-                                editingStepDict['actions'][i]['param'] = args[arg_name]
-        if editingStepDict['type'] == 'audio':
-            self.schema['audio_assets'][f"{step_name}_{self.editing_step_tracker[editingStep]}"] = editingStepDict
+                    if (
+                        "actions" in editingStepDict["inputs"]
+                        and arg_name in action_names
+                    ):
+                        for i, action in enumerate(editingStepDict["actions"]):
+                            if action["type"] == arg_name:
+                                editingStepDict["actions"][i]["param"] = args[arg_name]
+        if editingStepDict["type"] == "audio":
+            self.schema["audio_assets"][
+                f"{step_name}_{self.editing_step_tracker[editingStep]}"
+            ] = editingStepDict
         else:
-            self.schema['visual_assets'][f"{step_name}_{self.editing_step_tracker[editingStep]}"] = editingStepDict
+            self.schema["visual_assets"][
+                f"{step_name}_{self.editing_step_tracker[editingStep]}"
+            ] = editingStepDict
         self.editing_step_tracker[editingStep] += 1
 
-
     def ingestFlow(self, flow: Flow, args):
-        json_flow = json.loads(open(FLOWS_PATH / f"{flow.value}", 'r', encoding='utf-8').read())
-        for required_argument in list(json_flow['inputs'].keys()):
-                if required_argument not in args:
-                    raise Exception(
-                        f"Error. '{required_argument}' input missing, you must include it to use this editing step")
-                update = args[required_argument]
-                for path_key in reversed(json_flow['inputs'][required_argument].split("/")):
-                    update = {path_key: update}
-                json_flow = update_dict(json_flow, update)
+        json_flow = json.loads(
+            open(FLOWS_PATH / f"{flow.value}", "r", encoding="utf-8").read()
+        )
+        for required_argument in list(json_flow["inputs"].keys()):
+            if required_argument not in args:
+                raise Exception(
+                    f"Error. '{required_argument}' input missing, you must include it to use this editing step"
+                )
+            update = args[required_argument]
+            for path_key in reversed(json_flow["inputs"][required_argument].split("/")):
+                update = {path_key: update}
+            json_flow = update_dict(json_flow, update)
         self.schema = json_flow
 
     def dumpEditingSchema(self):
         return self.schema
-    
+
     def renderVideo(self, outputPath, logger=None):
         engine = CoreEditingEngine()
         engine.generate_video(self.schema, outputPath, logger=logger)
+
     def renderImage(self, outputPath, logger=None):
         engine = CoreEditingEngine()
         engine.generate_image(self.schema, outputPath, logger=logger)
+
     def generateAudio(self, outputPath, logger=None):
         engine = CoreEditingEngine()
         engine.generate_audio(self.schema, outputPath, logger=logger)
-
 
 
 # import json
@@ -151,7 +186,7 @@ class EditingEngine:
 #         self.editing_step_tracker = dict((step, 0) for step in EditingStep)
 #         self.schema = {'visual_assets': {}, 'audio_assets': {}}
 #         self.filepath = filepath
-        
+
 #         if filepath is not None:
 #             try:
 #                 self.load_from_file(filepath)
@@ -204,7 +239,7 @@ class EditingEngine:
 
 #     def dumpEditingSchema(self):
 #         return self.schema
-    
+
 #     def save_to_file(self):
 #         if self.file_path:
 #             with open(self.file_path, 'w') as f:
