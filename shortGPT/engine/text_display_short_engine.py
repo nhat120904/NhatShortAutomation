@@ -19,6 +19,7 @@ class TextDisplayShortEngine(ContentShortEngine):
         voiceModule=None,
         video_effect=None,
         video_effect_params=None,
+        match_music_duration: bool = False,
     ):
         # Initialize with background_video_name even if using image (for compatibility)
         super().__init__(
@@ -33,13 +34,18 @@ class TextDisplayShortEngine(ContentShortEngine):
             video_effect_params=video_effect_params,
         )
 
-        if not 1 <= duration <= 60:
+        if not match_music_duration and not 1 <= duration <= 60:
             raise ValueError("Duration must be between 1 and 60 seconds")
 
         self._db_custom_text = text
         self._db_background_image_name = background_image_name
         self._use_background_image = bool(background_image_name)
         self._db_duration = duration
+        self._match_music_duration = match_music_duration
+        
+        print(f"DEBUG TextDisplay INIT: match_music_duration = {match_music_duration} (type: {type(match_music_duration)})")
+        print(f"DEBUG TextDisplay INIT: background_music_name = '{background_music_name}'")
+        print(f"DEBUG TextDisplay INIT: initial duration = {duration}")
 
         # Define steps for the engine
         if self._use_background_image:
@@ -68,6 +74,45 @@ class TextDisplayShortEngine(ContentShortEngine):
                 "Text cannot be empty. Please provide text content for the video."
             )
         self._db_script = self._db_custom_text.strip()
+
+    def _chooseBackgroundMusic(self):
+        """Choose background music and optionally match video duration to music duration"""
+        print(f"DEBUG TextDisplay: _chooseBackgroundMusic called")
+        print(f"DEBUG TextDisplay: self._match_music_duration = {self._match_music_duration}")
+        print(f"DEBUG TextDisplay: self._db_background_music_name = '{self._db_background_music_name}'")
+        
+        if self._db_background_music_name:
+            from shortGPT.config.asset_db import AssetDatabase
+
+            self._db_background_music_url = AssetDatabase.get_asset_link(
+                self._db_background_music_name
+            )
+            print(f"DEBUG TextDisplay: music URL = {self._db_background_music_url}")
+            
+            # If match_music_duration is enabled, get the music duration and update video duration
+            if self._match_music_duration:
+                print(f"DEBUG TextDisplay: Match music duration is ENABLED, getting music duration...")
+                try:
+                    music_duration = AssetDatabase.get_asset_duration(
+                        self._db_background_music_name
+                    )
+                    print(f"DEBUG TextDisplay: music_duration = {music_duration}")
+                    if music_duration and music_duration > 0:
+                        old_duration = self._db_duration
+                        self._db_duration = int(music_duration)
+                        self.logger(f"Video duration set to match music duration: {self._db_duration} seconds")
+                        print(f"DEBUG TextDisplay: Duration changed from {old_duration} to {self._db_duration}")
+                    else:
+                        print(f"DEBUG TextDisplay: Invalid music duration: {music_duration}")
+                        self.logger("Warning: Could not get music duration, using original duration")
+                except Exception as e:
+                    print(f"DEBUG TextDisplay: Exception getting music duration: {e}")
+                    self.logger(f"Warning: Error getting music duration: {e}, using original duration")
+            else:
+                print(f"DEBUG TextDisplay: Match music duration is DISABLED")
+        else:
+            print(f"DEBUG TextDisplay: No background music specified")
+            self._db_background_music_url = None
 
     def _chooseBackgroundImage(self):
         """Choose background image"""

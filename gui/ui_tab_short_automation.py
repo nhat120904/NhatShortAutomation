@@ -82,12 +82,31 @@ class ShortAutomationUI(AbstractComponentUI):
                     label="Video duration (seconds)",
                     visible=False,
                 )
+                
+                match_music_duration = gr.Checkbox(
+                    label="Match video duration to background music duration",
+                    value=False,
+                    visible=False,
+                    info="When enabled, the video duration will automatically match the length of the selected background music",
+                    interactive=True
+                )
+                
+                def on_match_music_duration_change(match_music):
+                    print(f"DEBUG UI: Checkbox changed to: {match_music} (type: {type(match_music)})")
+                    return gr.update(interactive=not match_music)
+                
+                match_music_duration.change(
+                    on_match_music_duration_change,
+                    [match_music_duration],
+                    [video_duration]
+                )
 
                 def on_short_type_change(x):
                     return (
                         gr.update(visible=x == "Custom Facts shorts"),
                         gr.update(visible=x == "Custom Text shorts"),
                         gr.update(visible=x == "Custom Audio shorts"),
+                        gr.update(visible=x == "Text Display shorts"),
                         gr.update(visible=x == "Text Display shorts"),
                         gr.update(visible=x == "Text Display shorts"),
                     )
@@ -101,6 +120,7 @@ class ShortAutomationUI(AbstractComponentUI):
                         custom_audio,
                         display_text,
                         video_duration,
+                        match_music_duration,
                     ],
                 )
                 tts_engine = gr.Radio(
@@ -304,6 +324,7 @@ class ShortAutomationUI(AbstractComponentUI):
                     custom_audio,
                     display_text,
                     video_duration,
+                    match_music_duration,
                     video_effect,
                     darkness_factor,
                     vignette_strength,
@@ -332,12 +353,15 @@ class ShortAutomationUI(AbstractComponentUI):
         custom_audio,
         display_text,
         video_duration,
+        match_music_duration,
         video_effect,
         darkness_factor,
         vignette_strength,
         progress=gr.Progress(),
     ):
         """Creates a short"""
+        
+        print(f"DEBUG UI: create_short called with match_music_duration = {match_music_duration} (type: {type(match_music_duration)})")
 
         try:
             numShorts = int(numShorts)
@@ -405,6 +429,7 @@ class ShortAutomationUI(AbstractComponentUI):
                     EDGE_TTS_VOICENAME_MAPPING[language]["male"]
                 )
             for i in range(numShorts):
+                print(f"DEBUG UI: Calling create_short_engine with match_music_duration = {match_music_duration}")
                 shortEngine = self.create_short_engine(
                     short_type=short_type,
                     voice_module=voice_module,
@@ -419,6 +444,7 @@ class ShortAutomationUI(AbstractComponentUI):
                     custom_audio=custom_audio,
                     display_text=display_text,
                     video_duration=video_duration,
+                    match_music_duration=match_music_duration,
                     video_effect=video_effect_value,
                     video_effect_params=video_effect_params,
                 )
@@ -569,6 +595,7 @@ class ShortAutomationUI(AbstractComponentUI):
         custom_audio=None,
         display_text=None,
         video_duration=None,
+        match_music_duration=None,
         video_effect=None,
         video_effect_params=None,
     ):
@@ -616,6 +643,22 @@ class ShortAutomationUI(AbstractComponentUI):
                 video_effect_params=video_effect_params,
             )
         if short_type == "Text Display shorts":
+            print(f"DEBUG UI: Creating TextDisplayShortEngine with match_music_duration = {match_music_duration} (type: {type(match_music_duration)})")
+            # Convert to boolean to handle any UI value conversion issues
+            match_music_bool = bool(match_music_duration) if match_music_duration is not None else False
+            print(f"DEBUG UI: Converted to boolean: {match_music_bool}")
+            
+            # TEMPORARY DEBUG: Force enable for testing
+            if short_type == "Text Display shorts" and display_text and "test" in display_text.lower():
+                print("DEBUG UI: FORCING match_music_duration to True for testing!")
+                match_music_bool = True
+            
+            # ADDITIONAL DEBUG: Force enable if background music is selected
+            if short_type == "Text Display shorts" and background_music and len(background_music) > 0:
+                print(f"DEBUG UI: Background music detected: {background_music}")
+                print("DEBUG UI: Consider enabling match_music_duration automatically")
+                # Uncomment next line to force enable when music is selected:
+                # match_music_bool = True
             return TextDisplayShortEngine(
                 text=display_text,
                 duration=video_duration,
@@ -626,6 +669,7 @@ class ShortAutomationUI(AbstractComponentUI):
                 language=language,
                 video_effect=video_effect,
                 video_effect_params=video_effect_params,
+                match_music_duration=match_music_bool,
             )
         if "fact" in short_type.lower():
             if "custom" in short_type.lower():

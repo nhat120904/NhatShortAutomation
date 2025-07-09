@@ -292,10 +292,10 @@ class AssetDatabase:
         asset = cls.local_assets._get(key)
         asset["ts"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cls.local_assets._save({key: asset})
-        if "duration" not in asset and asset["duration"] is not None:
-            _, duration = cls._update_local_asset_duration(key)
-            return duration
-        return asset["duration"]
+        if "duration" in asset and asset["duration"] is not None:
+            return asset["duration"]
+        _, duration = cls._update_local_asset_duration(key)
+        return duration
 
     @classmethod
     def _get_remote_asset_duration(cls, key: str) -> str:
